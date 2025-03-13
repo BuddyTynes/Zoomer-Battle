@@ -1,0 +1,42 @@
+[gd_scene load_steps=5 format=3 uid="uid://62moj8uqp4q"]
+
+[ext_resource type="Script" path="res://scripts/player/gun_mod.gd" id="1_lvmn4"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6nkvs"]
+albedo_color = Color(0.184314, 0.184314, 0.184314, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kiu05"]
+albedo_color = Color(0.184314, 0.184314, 0.184314, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_okil2"]
+albedo_color = Color(0.18359, 0.18359, 0.18359, 1)
+
+[node name="gun-mod" type="Node3D"]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, -0.0327481, -1.23819)
+script = ExtResource("1_lvmn4")
+
+[node name="gun-1" type="CSGCombiner3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, -2)
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="gun-1"]
+transform = Transform3D(0.508578, 0, 0, 0, -2.22306e-08, -0.508578, 0, 0.508578, -2.22306e-08, -0.480046, 1.82465, 1.49252)
+radius = 0.1
+material = SubResource("StandardMaterial3D_6nkvs")
+
+[node name="gun-tip" type="CSGBox3D" parent="gun-1"]
+transform = Transform3D(0.108651, 0, 0, 0, 0.101203, 0, 0, 0, 0.130373, -0.482, 1.829, 2.5)
+visible = false
+material = SubResource("StandardMaterial3D_kiu05")
+
+[node name="gun-2" type="CSGCombiner3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, -2)
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="gun-2"]
+transform = Transform3D(0.508578, 0, 0, 0, -2.22306e-08, -0.508578, 0, 0.508578, -2.22306e-08, 0.483935, 1.82465, 1.49252)
+radius = 0.1
+material = SubResource("StandardMaterial3D_okil2")
+
+[node name="gun-tip" type="CSGBox3D" parent="gun-2"]
+transform = Transform3D(0.108651, 0, 0, 0, 0.101203, 0, 0, 0, 0.130373, 0.484, 1.826, 2.5)
+visible = false
+material = SubResource("StandardMaterial3D_kiu05")

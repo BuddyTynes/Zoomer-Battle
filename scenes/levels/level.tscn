@@ -1,0 +1,56 @@
+[gd_scene load_steps=3 format=3 uid="uid://cnqvqh5wgh37s"]
+
+[ext_resource type="Texture2D" uid="uid://b66mox0xsn8by" path="res://assets/textures/696.jpg" id="2_gttk6"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uu818"]
+albedo_texture = ExtResource("2_gttk6")
+uv1_triplanar = true
+uv1_world_triplanar = true
+
+[node name="level" type="Node3D"]
+
+[node name="greyboxing" type="CSGCombiner3D" parent="."]
+use_collision = true
+
+[node name="road-1" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(16.4819, 0, 0, 0, 1.19749, 0, 0, 0, 152.957, 0, 0, 9.07436)
+use_collision = true
+size = Vector3(1, 1, 1.11865)
+
+[node name="tunnle-1" type="CSGCylinder3D" parent="greyboxing"]
+transform = Transform3D(15.8618, 0, 0, 0, 1.72297, -15.768, 0, 15.768, 1.72297, 0, 7.52855, 73.6163)
+use_collision = true
+sides = 20
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="greyboxing/tunnle-1"]
+transform = Transform3D(0.91345, 0, 0, 0, 1.13349, 0.00836977, 0, -0.0103864, 0.913411, 0, 0.0610347, -0.0066213)
+operation = 2
+sides = 20
+
+[node name="tunnle-2" type="CSGCylinder3D" parent="greyboxing"]
+transform = Transform3D(15.8618, 0, 0, 0, 3.20654, -15.5343, 0, 15.5343, 3.20654, 0, 12.3768, 104.34)
+use_collision = true
+sides = 20
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="greyboxing/tunnle-2"]
+transform = Transform3D(0.91345, 0, 0, 0, 1.13349, 0.00836977, 0, -0.0103864, 0.913411, 0, 0.0610347, -0.0066213)
+operation = 2
+sides = 20
+
+[node name="road-2" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(15.2125, -0.365784, -35.8048, 5.78893, 1.09836, 28.756, 2.59227, -0.306245, 145.901, -12.1759, 25.3269, 200.199)
+use_collision = true
+size = Vector3(1, 1, 1.11865)
+
+[node name="road-3" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(15.9495, 0.112076, -35.8048, -0.814113, 1.17465, 28.756, 4.07455, -0.204011, 145.901, -25.9879, 23.1045, 197.248)
+use_collision = true
+size = Vector3(1, 1, 1.11865)
+
+[node name="ground" type="CSGBox3D" parent="."]
+transform = Transform3D(1000, -0.000144377, -0.459985, 0.0721551, 2, -0.0726034, 0.45999, 0.00014514, 1000, 0, -1, 0)
+use_collision = true
+material = SubResource("StandardMaterial3D_uu818")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37113e-08, 1, 0, -1, -4.37113e-08, -18.0694, 22.2207, 56.1272)

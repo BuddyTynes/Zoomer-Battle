@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://c5501q4surcnu"]
+
+[node name="Car" type="Node3D"]
+
+[node name="CameraPivot" type="Node3D" parent="."]
+top_level = true
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+transform = Transform3D(-1, -1.51808e-08, 8.60947e-08, 0, 0.984808, 0.173648, -8.74228e-08, 0.173648, -0.984808, 0, 1.72287, -4.81849)
+current = true
+
+[node name="ReverseCamera" type="Camera3D" parent="CameraPivot"]
+transform = Transform3D(1, 0, 0, 0, 0.976721, 0.214514, 0, -0.214514, 0.976721, 0, 2.26963, 5.34332)
+
+[node name="AirCamera" type="Camera3D" parent="CameraPivot"]
+transform = Transform3D(-1, -2.57058e-08, 8.35581e-08, 0, 0.955793, 0.29404, -8.74228e-08, 0.29404, -0.955793, 0, 6.05092, -8.15287)
