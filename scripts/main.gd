@@ -30,7 +30,7 @@ func _on_host_pressed() -> void:
 		print("Failed to create server: ", error)
 
 func _on_join_pressed() -> void:
-	var error = peer.create_client("localhost", 25565)
+	var error = peer.create_client("99.108.174.198", 42069)
 	if error == OK:
 		multiplayer.multiplayer_peer = peer
 		start.hide()
