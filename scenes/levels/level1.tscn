@@ -1,17 +1,18 @@
-[gd_scene load_steps=13 format=3 uid="uid://tj5dbddvjns6"]
+[gd_scene load_steps=14 format=3 uid="uid://tj5dbddvjns6"]
 
 [ext_resource type="PackedScene" uid="uid://c3ixqkc6k13yi" path="res://addons/gevp/scenes/vehicle_controller.tscn" id="1_f0x7w"]
 [ext_resource type="PackedScene" uid="uid://cd3qphnvh8fyv" path="res://addons/gevp/scenes/drift_car.tscn" id="2_rdih2"]
 [ext_resource type="PackedScene" uid="uid://b2hlchrj4h2b7" path="res://addons/gevp/scenes/engine_sound.tscn" id="3_0f03d"]
 [ext_resource type="PackedScene" uid="uid://h6vdpba71kpr" path="res://addons/gevp/scenes/smoke_effect.tscn" id="4_ye60t"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/gui.gd" id="5_5qpvm"]
-[ext_resource type="PackedScene" uid="uid://c5w2grk57isme" path="res://scenes/player/modules/jump_mod.tscn" id="5_mahnq"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/camera.gd" id="6_jbu2j"]
-[ext_resource type="PackedScene" uid="uid://62moj8uqp4q" path="res://scenes/player/modules/gun_mod.tscn" id="6_wbfoo"]
-[ext_resource type="PackedScene" uid="uid://do70wir11avc5" path="res://scenes/player/modules/jet_mod.tscn" id="7_b5wh6"]
 [ext_resource type="PackedScene" uid="uid://cnqvqh5wgh37s" path="res://scenes/levels/level1-map.tscn" id="7_bhkx2"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/debug.gd" id="8_nqq02"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/debug_ui.gd" id="9_hxgqq"]
+[ext_resource type="PackedScene" uid="uid://djoxluxtuoaly" path="res://scenes/player/modules/in-game-items/gyro_mod_item.tscn" id="11_be222"]
+[ext_resource type="PackedScene" uid="uid://bbpgrkrwanvis" path="res://scenes/player/modules/in-game-items/jet_mod_item.tscn" id="12_g6e0y"]
+[ext_resource type="PackedScene" uid="uid://cmgjtlluk5y7x" path="res://scenes/player/modules/in-game-items/jump_mod_item.tscn" id="13_5oka7"]
+[ext_resource type="PackedScene" uid="uid://cydjcmnmkscxl" path="res://scenes/player/modules/in-game-items/gun_mod_item.tscn" id="14_rcwbv"]
 
 [node name="ArcadeDemo" type="Node3D"]
 
@@ -28,12 +29,6 @@ vehicle = NodePath("..")
 
 [node name="Smoke" parent="VehicleController/VehicleRigidBody" node_paths=PackedStringArray("vehicle") instance=ExtResource("4_ye60t")]
 vehicle = NodePath("..")
-
-[node name="gun-mod" parent="VehicleController/VehicleRigidBody" instance=ExtResource("6_wbfoo")]
-
-[node name="jump-mod" parent="VehicleController/VehicleRigidBody" instance=ExtResource("5_mahnq")]
-
-[node name="JetMod" parent="VehicleController/VehicleRigidBody" instance=ExtResource("7_b5wh6")]
 
 [node name="GUI" type="Control" parent="." node_paths=PackedStringArray("vehicle")]
 layout_mode = 3
@@ -84,3 +79,29 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("9_hxgqq")
 metadata/_edit_use_anchors_ = true
+
+[node name="Items" type="Node3D" parent="."]
+
+[node name="GunModItem" parent="Items" instance=ExtResource("14_rcwbv")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 13.9876)
+
+[node name="GunModItem2" parent="Items" instance=ExtResource("11_be222")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -8.50946, 0.598745, 10.9793)
+
+[node name="GunModItem3" parent="Items" instance=ExtResource("12_g6e0y")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -15.276, 0.598743, 28.9492)
+
+[node name="GunModItem4" parent="Items" instance=ExtResource("13_5oka7")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -2.25562, 0.598746, 19.7028)
+
+[node name="GunModItem5" parent="Items" instance=ExtResource("14_rcwbv")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -16.4879, 0.598743, -11.2575)
+
+[node name="GunModItem6" parent="Items" instance=ExtResource("11_be222")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -17.6736, 0.598742, -5.85852)
+
+[node name="GunModItem7" parent="Items" instance=ExtResource("12_g6e0y")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -23.372, 0.598742, -1.94989)
+
+[node name="GunModItem8" parent="Items" instance=ExtResource("13_5oka7")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -21.3196, 0.598738, -9.8912)

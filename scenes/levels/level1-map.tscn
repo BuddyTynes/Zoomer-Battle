@@ -1,6 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://cnqvqh5wgh37s"]
+[gd_scene load_steps=4 format=3 uid="uid://cnqvqh5wgh37s"]
 
 [ext_resource type="Texture2D" uid="uid://b66mox0xsn8by" path="res://assets/textures/696.jpg" id="2_gttk6"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_e2rjk"]
+albedo_color = Color(0.329412, 0.843137, 0.952941, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uu818"]
 albedo_texture = ExtResource("2_gttk6")
@@ -13,7 +16,7 @@ uv1_world_triplanar = true
 use_collision = true
 
 [node name="road-1" type="CSGBox3D" parent="greyboxing"]
-transform = Transform3D(16.4819, 0, 0, 0, 1.19749, 0, 0, 0, 152.957, 0, 0, 9.07436)
+transform = Transform3D(474.892, 0, 0, 0, 1.19749, 0, 0, 0, 405.029, 0, 0, 9.07436)
 use_collision = true
 size = Vector3(1, 1, 1.11865)
 
@@ -37,15 +40,54 @@ transform = Transform3D(0.91345, 0, 0, 0, 1.13349, 0.00836977, 0, -0.0103864, 0.
 operation = 2
 sides = 20
 
-[node name="road-2" type="CSGBox3D" parent="greyboxing"]
-transform = Transform3D(15.2125, -0.365784, -35.8048, 5.78893, 1.09836, 28.756, 2.59227, -0.306245, 145.901, -12.1759, 25.3269, 200.199)
-use_collision = true
-size = Vector3(1, 1, 1.11865)
-
 [node name="road-3" type="CSGBox3D" parent="greyboxing"]
-transform = Transform3D(15.9495, 0.112076, -35.8048, -0.814113, 1.17465, 28.756, 4.07455, -0.204011, 145.901, -25.9879, 23.1045, 197.248)
+transform = Transform3D(16.4818, 0, 0, 0, 1.29721, 13.2153, 0, -0.247455, 69.2768, -1.0734, 14.8503, 158.045)
 use_collision = true
-size = Vector3(1, 1, 1.11865)
+size = Vector3(3.13586, 1, 1.11865)
+
+[node name="blue-block-1" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(1.272, 14.539, 0, -0.454769, 39.2381, 14.8607, 0.0867517, -7.48506, 77.9024, 11.1751, 25.3519, 155.332)
+use_collision = true
+size = Vector3(3.13586, 1, 1.11865)
+material = SubResource("StandardMaterial3D_e2rjk")
+
+[node name="blue-block-2" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(-0.635999, 7.26951, 68.682, 0.462969, 39.9456, 0, -1.10158, 12.5912, -39.6536, -21.1604, 33.017, 186.758)
+use_collision = true
+size = Vector3(3.13586, 1, 1.11865)
+material = SubResource("StandardMaterial3D_e2rjk")
+
+[node name="blue-block-3" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(-0.974406, -11.1375, 50.9776, -0.462969, 39.9456, 0, -0.817624, -9.3455, -60.7528, -41.5187, 28.4936, 149.429)
+use_collision = true
+size = Vector3(3.13586, 1, 1.11865)
+material = SubResource("StandardMaterial3D_e2rjk")
+
+[node name="road-4" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(0.866765, 0.243696, -69.2768, 4.54375, 1.2775, 13.2153, 26.2335, -0.229319, -3.02818e-06, -19.3137, 14.602, 160.641)
+use_collision = true
+size = Vector3(3.13586, 1, 1.11865)
+
+[node name="road-5" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(0.428385, 0.265429, -69.2768, 2.24568, 1.39143, 13.2153, 12.9655, -0.24977, -3.02818e-06, -92.9366, 33.8331, 190.115)
+use_collision = true
+size = Vector3(3.13586, 1, 1.11865)
+
+[node name="ThunderDome" type="CSGSphere3D" parent="greyboxing"]
+transform = Transform3D(-211.064, 0, 453.268, 0, 500, 0, -453.268, 0, -211.064, -393.056, 275.667, 365.414)
+radial_segments = 48
+rings = 24
+
+[node name="InnerDome" type="CSGSphere3D" parent="greyboxing/ThunderDome"]
+transform = Transform3D(0.99, 0, 0, 0, 0.99, 0, 0, 0, 0.99, 0, 0, 0)
+operation = 2
+radial_segments = 48
+rings = 24
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="greyboxing/ThunderDome"]
+transform = Transform3D(0.1, 0, 0, 0, -4.37114e-09, -0.1, 0, 0.1, -4.37114e-09, 0, -0.241929, 0.430122)
+operation = 2
+height = 1.0
 
 [node name="ground" type="CSGBox3D" parent="."]
 transform = Transform3D(1000, -0.000144377, -0.459985, 0.0721551, 2, -0.0726034, 0.45999, 0.00014514, 1000, 0, -1, 0)

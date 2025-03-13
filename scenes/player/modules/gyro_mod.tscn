@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://pdgtan28wgfr"]
+
+[ext_resource type="Script" path="res://scripts/player/gyro_mod.gd" id="1_pn3tx"]
+
+[node name="gyro-mod" type="Node3D"]
+script = ExtResource("1_pn3tx")
+
+[node name="RayCast3D" type="RayCast3D" parent="."]
+collide_with_areas = true
+debug_shape_custom_color = Color(0.768627, 0, 0, 1)
