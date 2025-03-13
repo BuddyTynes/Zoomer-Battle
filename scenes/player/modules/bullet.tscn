@@ -11,7 +11,7 @@ height = 0.2
 
 [node name="Bullet" type="RigidBody3D"]
 collision_layer = 2
-collision_mask = 4
+collision_mask = 2
 script = ExtResource("1_n16ep")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
@@ -19,3 +19,5 @@ shape = SubResource("SphereShape3D_6473x")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 mesh = SubResource("SphereMesh_6ye33")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]

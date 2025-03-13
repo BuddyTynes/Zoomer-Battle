@@ -9,7 +9,7 @@
 [ext_resource type="Script" path="res://addons/gevp/scripts/camera.gd" id="6_jbu2j"]
 [ext_resource type="PackedScene" uid="uid://62moj8uqp4q" path="res://scenes/player/modules/gun_mod.tscn" id="6_wbfoo"]
 [ext_resource type="PackedScene" uid="uid://do70wir11avc5" path="res://scenes/player/modules/jet_mod.tscn" id="7_b5wh6"]
-[ext_resource type="PackedScene" uid="uid://cnqvqh5wgh37s" path="res://scenes/levels/level.tscn" id="7_bhkx2"]
+[ext_resource type="PackedScene" uid="uid://cnqvqh5wgh37s" path="res://scenes/levels/level1-map.tscn" id="7_bhkx2"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/debug.gd" id="8_nqq02"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/debug_ui.gd" id="9_hxgqq"]
 
@@ -69,7 +69,7 @@ follow_distance = 8
 follow_height = 5
 follow_this = NodePath("../VehicleController/VehicleRigidBody")
 
-[node name="level" parent="." instance=ExtResource("7_bhkx2")]
+[node name="level1-map" parent="." instance=ExtResource("7_bhkx2")]
 
 [node name="Debug" type="Node" parent="." node_paths=PackedStringArray("vehicle")]
 script = ExtResource("8_nqq02")

@@ -1,7 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://bjw3o16gxbm4g"]
-
-[ext_resource type="Script" path="res://addons/gevp/scripts/vehicle_controllergd.gd" id="1_lcke3"]
-
-[node name="VehicleController" type="Node3D"]
-transform = Transform3D(-0.994015, 0, 0.109248, 0, 1, 0, -0.109248, 0, -0.994015, 0, 1.09154, 0)
-script = ExtResource("1_lcke3")

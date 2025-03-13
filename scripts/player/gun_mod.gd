@@ -11,7 +11,11 @@ const BULLET_SPEED = 1000.0  # Speed of the bullets
 
 var time_since_last_shot = 0.0
 var right = false
+var pid
 
+func _ready() -> void:
+	pid = multiplayer.get_unique_id()
+	
 func _process(delta: float) -> void:
 	if Input.is_action_pressed("fire_guns"):
 		time_since_last_shot += delta
@@ -20,17 +24,12 @@ func _process(delta: float) -> void:
 			shoot_guns()
 
 func shoot_guns() -> void:
-	if right == true:
-		right = false
-		var right_bullet = bullet_scene.instantiate()
-		right_bullet.transform.origin = right_gun_position.global_transform.origin
-		right_bullet.transform.basis = right_gun_position.global_transform.basis
-		right_bullet.linear_velocity = right_gun_position.global_transform.basis.z * BULLET_SPEED
-		get_tree().root.add_child(right_bullet)
-	else:
-		right = true
-		var left_bullet = bullet_scene.instantiate()
-		left_bullet.transform.origin = left_gun_position.global_transform.origin
-		left_bullet.transform.basis = left_gun_position.global_transform.basis
-		left_bullet.linear_velocity = left_gun_position.global_transform.basis.z * BULLET_SPEED
-		get_tree().root.add_child(left_bullet)
+	var bullet = bullet_scene.instantiate()
+	var gun_pos = right_gun_position if right == true else left_gun_position
+	right = !right
+	# set and spawn
+	bullet.transform.origin = gun_pos.global_transform.origin
+	bullet.transform.basis = gun_pos.global_transform.basis
+	bullet.linear_velocity = gun_pos.global_transform.basis.z * BULLET_SPEED
+	bullet.set_pid(pid) # check which PID bullet is fired from
+	get_tree().root.add_child(bullet)
