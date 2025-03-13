@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://pdgtan28wgfr" path="res://scenes/player/modules/gyro_mod.tscn" id="2_qcxjc"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mjjgh"]
-albedo_color = Color(0.340339, 0.340339, 0.340339, 1)
+albedo_color = Color(0.686095, 0.538269, 0.965263, 1)
 
 [sub_resource type="Animation" id="Animation_tptd8"]
 length = 0.001

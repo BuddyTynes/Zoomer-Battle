@@ -83,25 +83,25 @@ metadata/_edit_use_anchors_ = true
 [node name="Items" type="Node3D" parent="."]
 
 [node name="GunModItem" parent="Items" instance=ExtResource("14_rcwbv")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 13.9876)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 3.99411, 0, 27.1472)
 
 [node name="GunModItem2" parent="Items" instance=ExtResource("11_be222")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -8.50946, 0.598745, 10.9793)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 25.8263, 0.598745, 40.2451)
 
 [node name="GunModItem3" parent="Items" instance=ExtResource("12_g6e0y")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -15.276, 0.598743, 28.9492)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -2.10664, 0.598743, 41.3594)
 
 [node name="GunModItem4" parent="Items" instance=ExtResource("13_5oka7")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -2.25562, 0.598746, 19.7028)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 14.2075, 0.598746, 19.7028)
 
 [node name="GunModItem5" parent="Items" instance=ExtResource("14_rcwbv")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -16.4879, 0.598743, -11.2575)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 83.2574, 0.598743, 10.3913)
 
 [node name="GunModItem6" parent="Items" instance=ExtResource("11_be222")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -17.6736, 0.598742, -5.85852)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 82.0716, 0.598742, 15.7903)
 
 [node name="GunModItem7" parent="Items" instance=ExtResource("12_g6e0y")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -23.372, 0.598742, -1.94989)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 76.3732, 0.598742, 19.6989)
 
 [node name="GunModItem8" parent="Items" instance=ExtResource("13_5oka7")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -21.3196, 0.598738, -9.8912)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 78.4257, 0.598738, 11.7576)

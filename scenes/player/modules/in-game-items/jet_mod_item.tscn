@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://do70wir11avc5" path="res://scenes/player/modules/jet_mod.tscn" id="2_17ol2"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mjjgh"]
-albedo_color = Color(0.340339, 0.340339, 0.340339, 1)
+albedo_color = Color(0.627451, 0.0196078, 0.0980392, 1)
 
 [sub_resource type="Animation" id="Animation_tptd8"]
 length = 0.001
