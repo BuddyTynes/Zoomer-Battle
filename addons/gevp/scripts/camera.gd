@@ -7,24 +7,25 @@ extends Camera3D
 
 var start_rotation : Vector3
 var start_position : Vector3
-
 var rotating = false
 var previous_mouse_position : Vector2
+var current_yaw = 0.0
+var current_pitch = 0.0
+var last_mouse_position = Vector2()
 
 func _ready():
 	start_rotation = rotation
 	start_position = position
 
 func _physics_process(delta : float):
+	follow_target()
 	if Input.is_action_pressed("ui_right_click"):
-		if not rotating:
-			rotating = true
-			previous_mouse_position = get_viewport().get_mouse_position()
+		rotating = true
+		previous_mouse_position = get_viewport().get_mouse_position()
 		update_camera_rotation()
 	else:
 		rotating = false
-		follow_target()
-
+		
 	look_at(follow_this.global_transform.origin, Vector3.UP)
 
 func follow_target():
@@ -35,13 +36,25 @@ func follow_target():
 		delta_v.y = follow_height
 		global_position = follow_this.global_transform.origin + delta_v
 
+
+
 func update_camera_rotation():
-	print("Updating roation")
-	var mouse_delta = Input.get_last_mouse_velocity()
-	var rotation_speed = 2  # Adjust rotation speed as needed
+	var mouse_position = get_viewport().get_mouse_position()
+	var mouse_delta = mouse_position - last_mouse_position
+	last_mouse_position = mouse_position
+	var rotation_speed = 0.01  # Adjust rotation speed as needed
 
-	var yaw = -mouse_delta.x * rotation_speed
-	var pitch = -mouse_delta.y * rotation_speed
+	if mouse_delta.x != 0 or mouse_delta.y != 0:
+		current_yaw += mouse_delta.x * rotation_speed
+		current_pitch = clamp(current_pitch + mouse_delta.y * rotation_speed, -PI / 4, PI / 4)  # Prevent flipping
 
-	rotate_object_local(Vector3.UP, yaw)
-	rotate_object_local(Vector3.RIGHT, pitch)
+		var offset = Vector3(
+			follow_distance * cos(current_yaw) * cos(current_pitch),
+			follow_height + follow_distance * sin(current_pitch),
+			follow_distance * sin(current_yaw) * cos(current_pitch)
+		)
+		
+		global_transform.origin = follow_this.global_transform.origin + offset
+
+		look_at(follow_this.global_transform.origin, Vector3.UP)
+		
