@@ -1,0 +1,107 @@
+[gd_scene load_steps=14 format=3 uid="uid://tj5dbddvjns6"]
+
+[ext_resource type="PackedScene" uid="uid://c3ixqkc6k13yi" path="res://addons/gevp/scenes/vehicle_controller.tscn" id="1_f0x7w"]
+[ext_resource type="PackedScene" uid="uid://cd3qphnvh8fyv" path="res://addons/gevp/scenes/drift_car.tscn" id="2_rdih2"]
+[ext_resource type="PackedScene" uid="uid://b2hlchrj4h2b7" path="res://addons/gevp/scenes/engine_sound.tscn" id="3_0f03d"]
+[ext_resource type="PackedScene" uid="uid://h6vdpba71kpr" path="res://addons/gevp/scenes/smoke_effect.tscn" id="4_ye60t"]
+[ext_resource type="Script" path="res://addons/gevp/scripts/gui.gd" id="5_5qpvm"]
+[ext_resource type="Script" path="res://addons/gevp/scripts/camera.gd" id="6_jbu2j"]
+[ext_resource type="PackedScene" uid="uid://cnqvqh5wgh37s" path="res://scenes/levels/level1-map.tscn" id="7_bhkx2"]
+[ext_resource type="Script" path="res://addons/gevp/scripts/debug.gd" id="8_nqq02"]
+[ext_resource type="Script" path="res://addons/gevp/scripts/debug_ui.gd" id="9_hxgqq"]
+[ext_resource type="PackedScene" uid="uid://djoxluxtuoaly" path="res://scenes/player/modules/in-game-items/gyro_mod_item.tscn" id="11_be222"]
+[ext_resource type="PackedScene" uid="uid://bbpgrkrwanvis" path="res://scenes/player/modules/in-game-items/jet_mod_item.tscn" id="12_g6e0y"]
+[ext_resource type="PackedScene" uid="uid://cmgjtlluk5y7x" path="res://scenes/player/modules/in-game-items/jump_mod_item.tscn" id="13_5oka7"]
+[ext_resource type="PackedScene" uid="uid://cydjcmnmkscxl" path="res://scenes/player/modules/in-game-items/gun_mod_item.tscn" id="14_rcwbv"]
+
+[node name="ArcadeDemo" type="Node3D"]
+
+[node name="VehicleController" parent="." node_paths=PackedStringArray("vehicle_node") instance=ExtResource("1_f0x7w")]
+transform = Transform3D(-0.994015, 0, 0.109248, 0, 1, 0, -0.109248, 0, -0.994015, 0, 1.09154, 0)
+vehicle_node = NodePath("VehicleRigidBody")
+
+[node name="VehicleRigidBody" parent="VehicleController" instance=ExtResource("2_rdih2")]
+front_camber = 0.136
+rear_camber = 0.136
+
+[node name="EngineSound" parent="VehicleController/VehicleRigidBody" node_paths=PackedStringArray("vehicle") instance=ExtResource("3_0f03d")]
+vehicle = NodePath("..")
+
+[node name="Smoke" parent="VehicleController/VehicleRigidBody" node_paths=PackedStringArray("vehicle") instance=ExtResource("4_ye60t")]
+vehicle = NodePath("..")
+
+[node name="GUI" type="Control" parent="." node_paths=PackedStringArray("vehicle")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_5qpvm")
+vehicle = NodePath("../VehicleController/VehicleRigidBody")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="GUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Speed" type="Label" parent="GUI/VBoxContainer"]
+layout_mode = 2
+
+[node name="RPM" type="Label" parent="GUI/VBoxContainer"]
+layout_mode = 2
+
+[node name="Gear" type="Label" parent="GUI/VBoxContainer"]
+layout_mode = 2
+
+[node name="Camera3D" type="Camera3D" parent="." node_paths=PackedStringArray("follow_this")]
+transform = Transform3D(1, 0, 0, 0, 0.989776, 0.142629, 0, -0.142629, 0.989776, 4.05282, 4.72172, 5.80061)
+script = ExtResource("6_jbu2j")
+follow_distance = 8
+follow_height = 5
+follow_this = NodePath("../VehicleController/VehicleRigidBody")
+
+[node name="level1-map" parent="." instance=ExtResource("7_bhkx2")]
+
+[node name="Debug" type="Node" parent="." node_paths=PackedStringArray("vehicle")]
+script = ExtResource("8_nqq02")
+vehicle = NodePath("../VehicleController/VehicleRigidBody")
+
+[node name="DebugUI" type="Control" parent="Debug"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("9_hxgqq")
+metadata/_edit_use_anchors_ = true
+
+[node name="Items" type="Node3D" parent="."]
+
+[node name="GunModItem" parent="Items" instance=ExtResource("14_rcwbv")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 3.99411, 0, 27.1472)
+
+[node name="GunModItem2" parent="Items" instance=ExtResource("11_be222")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 25.8263, 0.598745, 40.2451)
+
+[node name="GunModItem3" parent="Items" instance=ExtResource("12_g6e0y")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -2.10664, 0.598743, 41.3594)
+
+[node name="GunModItem4" parent="Items" instance=ExtResource("13_5oka7")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 14.2075, 0.598746, 19.7028)
+
+[node name="GunModItem5" parent="Items" instance=ExtResource("14_rcwbv")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 83.2574, 0.598743, 10.3913)
+
+[node name="GunModItem6" parent="Items" instance=ExtResource("11_be222")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 82.0716, 0.598742, 15.7903)
+
+[node name="GunModItem7" parent="Items" instance=ExtResource("12_g6e0y")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 76.3732, 0.598742, 19.6989)
+
+[node name="GunModItem8" parent="Items" instance=ExtResource("13_5oka7")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 78.4257, 0.598738, 11.7576)
