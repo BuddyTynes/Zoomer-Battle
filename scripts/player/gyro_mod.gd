@@ -35,7 +35,7 @@ func stablize_car(delta):
 	var pitch_input = (Input.get_action_strength("ui_right_stick_up") - Input.get_action_strength("ui_right_stick_down")) * -1
 	var roll_input = Input.get_action_strength("ui_right_stick_left") - Input.get_action_strength("ui_right_stick_right")
 	var pitch_torque = global_transform.basis.x * pitch_input * ROTATION_SPEED
-	var roll_torque = global_transform.basis.z * roll_input * ROTATION_SPEED
+	var roll_torque = global_transform.basis.y * roll_input * ROTATION_SPEED
 	
 	vehicle.axis_lock_angular_x = false
 	vehicle.axis_lock_angular_z = false
