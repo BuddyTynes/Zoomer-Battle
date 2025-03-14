@@ -69,9 +69,9 @@ use_collision = true
 size = Vector3(3.13586, 1, 1.11865)
 
 [node name="road-5" type="CSGBox3D" parent="greyboxing"]
-transform = Transform3D(0.428385, 0.265429, -69.2768, 2.24568, 1.39143, 13.2153, 12.9655, -0.24977, -3.02818e-06, -92.9366, 33.8331, 190.115)
+transform = Transform3D(7.26002, 0.678113, -48.5377, -0.338736, 1.19991, 38.8483, 10.9776, -0.411441, 33.299, -79.7513, 45.5553, 200.107)
 use_collision = true
-size = Vector3(3.13586, 1, 1.11865)
+size = Vector3(3.13586, 1.08307, 1.11865)
 
 [node name="ThunderDome" type="CSGSphere3D" parent="greyboxing"]
 transform = Transform3D(-211.064, 0, 453.268, 0, 500, 0, -453.268, 0, -211.064, -393.056, 275.667, 365.414)
@@ -88,6 +88,12 @@ rings = 24
 transform = Transform3D(0.1, 0, 0, 0, -4.37114e-09, -0.1, 0, 0.1, -4.37114e-09, 0, -0.241929, 0.430122)
 operation = 2
 height = 1.0
+
+[node name="CSGTorus3D" type="CSGTorus3D" parent="greyboxing"]
+transform = Transform3D(10, 0, 0, 0, -4.37114e-07, -10, 0, 10, -4.37114e-07, -2.94522, 58.0774, 21.4074)
+inner_radius = 0.85576
+outer_radius = 1.46139
+sides = 23
 
 [node name="ground" type="CSGBox3D" parent="."]
 transform = Transform3D(1000, -0.000144377, -0.459985, 0.0721551, 2, -0.0726034, 0.45999, 0.00014514, 1000, 0, -1, 0)
