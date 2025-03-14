@@ -16,7 +16,7 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 func _on_host_pressed() -> void:
-	var error = peer.create_server(25565)
+	var error = peer.create_server(42069)
 	if error == OK:
 		start.hide()
 		multiplayer.multiplayer_peer = peer
@@ -31,6 +31,7 @@ func _on_host_pressed() -> void:
 
 func _on_join_pressed() -> void:
 	var error = peer.create_client("99.108.174.198", 42069)
+	print(error)
 	if error == OK:
 		multiplayer.multiplayer_peer = peer
 		start.hide()

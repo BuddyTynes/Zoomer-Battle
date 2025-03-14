@@ -60,6 +60,7 @@ height = 0.4
 
 [node name="jet" type="GPUParticles3D" parent="left-jet"]
 transform = Transform3D(1.00134, 0, 0, 0, 1.00134, -3.55271e-15, 0, 3.55271e-15, 1.00134, 0, 0, 0)
+emitting = false
 amount = 120
 lifetime = 0.2
 process_material = SubResource("ParticleProcessMaterial_tbsnm")
