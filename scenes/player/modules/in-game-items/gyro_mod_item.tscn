@@ -525,7 +525,7 @@ mesh = SubResource("ArrayMesh_ricat")
 skeleton = NodePath("")
 
 [node name="Circle_001" type="MeshInstance3D" parent="Gyro_Mod_Spinner"]
-transform = Transform3D(0.0756454, 0, 0, 0, -1.38488, 0, 0, 0, 0.0756454, 0, 0, 0)
+transform = Transform3D(0.075644, 0, 0, 0, -1.38488, 0, 0, 0, 0.075644, 0, 0, 0)
 mesh = SubResource("ArrayMesh_oj1qx")
 skeleton = NodePath("")
 
@@ -534,7 +534,7 @@ mesh = SubResource("ArrayMesh_ntyfu")
 skeleton = NodePath("")
 
 [node name="Circle_004" type="MeshInstance3D" parent="Gyro_Mod_Spinner/Circle_002"]
-transform = Transform3D(-0.0542458, 0.137173, -0.0978486, 0.169591, -0.0256573, -0.2548, -0.2548, -0.0462805, -0.148759, 0.000758926, 0.108469, 0.0286247)
+transform = Transform3D(-0.0542451, 0.137173, -0.0978481, 0.16959, -0.0256575, -0.2548, -0.254801, -0.0462802, -0.148759, 0.000758926, 0.108469, 0.0286247)
 mesh = SubResource("ArrayMesh_x12na")
 skeleton = NodePath("")
 
