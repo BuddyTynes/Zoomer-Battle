@@ -410,45 +410,6 @@ tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = PackedFloat32Array(0, 1, 0.560998, 0.560997, -0.430444, 0.430444)
 
-[sub_resource type="Animation" id="Animation_afr5d"]
-resource_name = "Circle_002Action_002"
-length = 2.0
-tracks/0/type = "rotation_3d"
-tracks/0/imported = true
-tracks/0/enabled = true
-tracks/0/path = NodePath("Circle_002")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1, 0.0333333, 1, 0, 0, 0, 1, 0.0666667, 1, 0, 0.0400947, 0, 0.999196, 1.03333, 1, 0, 0.999799, 0, -0.0200515, 1.06667, 1, 0, -0.997298, 0, 0.0734606, 1.96667, 1, 0, -0.0534482, 0, 0.998571, 2, 1, 0, 3.25841e-07, 0, 1)
-tracks/1/type = "rotation_3d"
-tracks/1/imported = true
-tracks/1/enabled = true
-tracks/1/path = NodePath("Circle")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1)
-tracks/2/type = "rotation_3d"
-tracks/2/imported = true
-tracks/2/enabled = true
-tracks/2/path = NodePath("Circle_001")
-tracks/2/interp = 1
-tracks/2/loop_wrap = true
-tracks/2/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1)
-tracks/3/type = "scale_3d"
-tracks/3/imported = true
-tracks/3/enabled = true
-tracks/3/path = NodePath("Circle_001")
-tracks/3/interp = 1
-tracks/3/loop_wrap = true
-tracks/3/keys = PackedFloat32Array(0, 1, 0.768911, 0.40378, 0.768911)
-tracks/4/type = "rotation_3d"
-tracks/4/imported = true
-tracks/4/enabled = true
-tracks/4/path = NodePath("Circle_002/Circle_004")
-tracks/4/interp = 1
-tracks/4/loop_wrap = true
-tracks/4/keys = PackedFloat32Array(0, 1, 0.560998, 0.560997, -0.430444, 0.430444)
-
 [sub_resource type="Animation" id="Animation_wyrt3"]
 resource_name = "Action_003"
 length = 2.0
@@ -488,6 +449,45 @@ tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1)
 
+[sub_resource type="Animation" id="Animation_afr5d"]
+resource_name = "Circle_002Action_002"
+length = 2.0
+tracks/0/type = "rotation_3d"
+tracks/0/imported = true
+tracks/0/enabled = true
+tracks/0/path = NodePath("Circle_002")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1, 0.0333333, 1, 0, 0, 0, 1, 0.0666667, 1, 0, 0.0400947, 0, 0.999196, 1.03333, 1, 0, 0.999799, 0, -0.0200515, 1.06667, 1, 0, -0.997298, 0, 0.0734606, 1.96667, 1, 0, -0.0534482, 0, 0.998571, 2, 1, 0, 3.25841e-07, 0, 1)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = true
+tracks/1/enabled = true
+tracks/1/path = NodePath("Circle")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1)
+tracks/2/type = "rotation_3d"
+tracks/2/imported = true
+tracks/2/enabled = true
+tracks/2/path = NodePath("Circle_001")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1)
+tracks/3/type = "scale_3d"
+tracks/3/imported = true
+tracks/3/enabled = true
+tracks/3/path = NodePath("Circle_001")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = PackedFloat32Array(0, 1, 0.768911, 0.40378, 0.768911)
+tracks/4/type = "rotation_3d"
+tracks/4/imported = true
+tracks/4/enabled = true
+tracks/4/path = NodePath("Circle_002/Circle_004")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = PackedFloat32Array(0, 1, 0.560998, 0.560997, -0.430444, 0.430444)
+
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_8cful"]
 _data = {
 "Action": SubResource("Animation_qxcbi"),
@@ -525,7 +525,7 @@ mesh = SubResource("ArrayMesh_ricat")
 skeleton = NodePath("")
 
 [node name="Circle_001" type="MeshInstance3D" parent="Gyro_Mod_Spinner"]
-transform = Transform3D(0.768911, 0, 0, 0, 0.40378, 0, 0, 0, 0.768911, 0, 0, 0)
+transform = Transform3D(0.0756454, 0, 0, 0, -1.38488, 0, 0, 0, 0.0756454, 0, 0, 0)
 mesh = SubResource("ArrayMesh_oj1qx")
 skeleton = NodePath("")
 
@@ -534,7 +534,7 @@ mesh = SubResource("ArrayMesh_ntyfu")
 skeleton = NodePath("")
 
 [node name="Circle_004" type="MeshInstance3D" parent="Gyro_Mod_Spinner/Circle_002"]
-transform = Transform3D(1.29696e-07, 0.147025, 2.57841e-09, 0.0804704, -1.47023e-08, -0.300252, -0.300252, 5.95684e-08, -0.0804704, 0.000758926, 0.108469, 0.0286247)
+transform = Transform3D(-0.0542458, 0.137173, -0.0978486, 0.169591, -0.0256573, -0.2548, -0.2548, -0.0462805, -0.148759, 0.000758926, 0.108469, 0.0286247)
 mesh = SubResource("ArrayMesh_x12na")
 skeleton = NodePath("")
 

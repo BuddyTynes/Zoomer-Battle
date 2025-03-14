@@ -17,7 +17,7 @@ func _ready() -> void:
 
 func _on_host_pressed() -> void:
 	var error = peer.create_server(42069)
-	if error == OK:
+	if !error:
 		start.hide()
 		multiplayer.multiplayer_peer = peer
 		var pid = multiplayer.get_unique_id()
@@ -31,8 +31,7 @@ func _on_host_pressed() -> void:
 
 func _on_join_pressed() -> void:
 	var error = peer.create_client("99.108.174.198", 42069)
-	print(error)
-	if error == OK:
+	if !error:
 		multiplayer.multiplayer_peer = peer
 		start.hide()
 		add_level()
@@ -108,3 +107,7 @@ func _on_server_disconnected() -> void:
 		if child is Vehicle:
 			child.queue_free()
 	start.show()
+	
+@rpc("any_peer", "call_local", "unreliable")
+func on_hit():
+	print("I'm getting hit")

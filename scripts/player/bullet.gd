@@ -15,7 +15,7 @@ func set_pid(pid) -> void:
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _integrate_forces(_state):
 	linear_velocity = transform.basis.z * BULLET_SPEED
-
-
-func _on_body_entered(body: Node) -> void:
-	print("Bullet from PID: " + str(PID))
+	
+func _on_area_3d_body_entered(body: Node3D) -> void:
+	if body.has_method("on_hit") and str(PID) != body.name:
+		print(body.name)

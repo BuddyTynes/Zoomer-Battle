@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://upsyh8tgbwa5"]
+[gd_scene load_steps=5 format=3 uid="uid://upsyh8tgbwa5"]
 
 [ext_resource type="Script" path="res://scripts/player/bullet.gd" id="1_n16ep"]
 
@@ -8,6 +8,9 @@ radius = 0.1
 [sub_resource type="SphereMesh" id="SphereMesh_6ye33"]
 radius = 0.1
 height = 0.2
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_1torf"]
+radius = 0.15
 
 [node name="Bullet" type="RigidBody3D"]
 collision_layer = 2
@@ -20,4 +23,10 @@ shape = SubResource("SphereShape3D_6473x")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 mesh = SubResource("SphereMesh_6ye33")
 
+[node name="Area3D" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("SphereShape3D_1torf")
+
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]
+[connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
