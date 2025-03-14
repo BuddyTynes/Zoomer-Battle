@@ -2,9 +2,7 @@
 
 [ext_resource type="Script" path="res://scenes/player/modules/in-game-items/gun_mod_item.gd" id="1_j824x"]
 [ext_resource type="PackedScene" uid="uid://pdgtan28wgfr" path="res://scenes/player/modules/gyro_mod.tscn" id="2_qcxjc"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mjjgh"]
-albedo_color = Color(0.686095, 0.538269, 0.965263, 1)
+[ext_resource type="PackedScene" uid="uid://b04j6n6nf6ep2" path="res://scenes/player/modules/in-game-items/Gyro_Mod_Spinner.glb" id="3_saqmk"]
 
 [sub_resource type="Animation" id="Animation_tptd8"]
 length = 0.001
@@ -54,29 +52,6 @@ mod = ExtResource("2_qcxjc")
 
 [node name="gun" type="CSGCombiner3D" parent="."]
 
-[node name="CSGBox3D" type="CSGBox3D" parent="gun"]
-transform = Transform3D(1.8362, 0, 0, 0, 1, 0, 0, 0, 1, -0.412815, 5.73102, 0)
-size = Vector3(1.07324, 1, 1)
-material = SubResource("StandardMaterial3D_mjjgh")
-
-[node name="CSGBox3D4" type="CSGBox3D" parent="gun"]
-transform = Transform3D(1, 0, 0, 0, 2.0278, 0, 0, 0, 1, -0.772, 4.98237, 0)
-material = SubResource("StandardMaterial3D_mjjgh")
-
-[node name="CSGCylinder3D" type="CSGCylinder3D" parent="gun"]
-transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 1.81172, 6.2823, 0)
-radius = 0.2
-material = SubResource("StandardMaterial3D_mjjgh")
-
-[node name="CSGBox3D2" type="CSGBox3D" parent="gun"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.269079, 6.11535, 0)
-size = Vector3(3.41406, 1, 1)
-material = SubResource("StandardMaterial3D_mjjgh")
-
-[node name="CSGBox3D3" type="CSGBox3D" parent="gun"]
-transform = Transform3D(4.31969, 0, 0, 0, 1, 0, 0, 0, 1.07559, 0.5918, 6.29745, 0)
-material = SubResource("StandardMaterial3D_mjjgh")
-
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
 "": SubResource("AnimationLibrary_ayatv")
@@ -87,5 +62,11 @@ libraries = {
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.55206, 0)
 shape = SubResource("BoxShape3D_cxd2j")
+
+[node name="Gyro_Mod_Spinner" parent="." instance=ExtResource("3_saqmk")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -0.103604, 6.12626, -0.163131)
+
+[node name="Camera3D" type="Camera3D" parent="Gyro_Mod_Spinner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.38009)
 
 [connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
