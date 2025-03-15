@@ -16,35 +16,72 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 func _on_host_pressed() -> void:
-	var error = peer.create_server(42069)
+	var error = peer.create_server(42069, 9)
 	if !error:
 		start.hide()
 		multiplayer.multiplayer_peer = peer
 		var pid = multiplayer.get_unique_id()
 		multiplayer.peer_connected.connect(_on_peer_connected)
 		add_level()
-		
-		vehicle_rigid_body = get_child(1).get_child(0).get_child(0)
-		vehicle_rigid_body.name = str(pid)
+		# remove the car instance and activate host cam.
+		level_instance.get_node("HostCam").current = true
+		level_instance.get_node("Debug").queue_free()
+		level_instance.get_node("GUI").queue_free()
+		level_instance.get_node("Camera3D").queue_free()
+		level_instance.get_node("VehicleController").set_script(null)
+		level_instance.get_node("VehicleController").get_child(0).queue_free()
+		print("Server started ...")
 	else:
 		print("Failed to create server: ", error)
-
+		
 func _on_join_pressed() -> void:
-	var error = peer.create_client("99.108.174.198", 42069)
+	#var error = peer.create_client("99.108.174.198", 42069)
+	var error = peer.create_client("localhost", 42069)
 	if !error:
 		multiplayer.multiplayer_peer = peer
 		start.hide()
 		add_level()
-		vehicle_rigid_body = get_child(1).get_child(0).get_child(0)
 	else:
 		print("Failed to join server: ", error)
+
+#  SSS   EEEE  RRRR   V   V  EEEE  RRRR 
+# S      E     R   R  V   V  E     R   R
+#  SSS   EEEE  RRRR   V   V  EEEE  RRRR 
+#     S  E     R  R    V V   E     R  R
+#  SSS   EEEE  R   R    V    EEEE  R   R
+@rpc("any_peer")
+func _on_peer_connected(pid: int) -> void:
+	# Tell new peer about existing players
+	print("Peer Connectred ... ID: " + str(pid))
+	if multiplayer.is_server():
+		for existing_pid in multiplayer.get_peers():
+			if existing_pid != pid:
+				rpc_id(existing_pid, "spawn_player", pid)
+				rpc_id(pid, "spawn_player", existing_pid)
+				
+		add_player(pid)
+#  SSS   EEEE  RRRR   V   V  EEEE  RRRR 
+# S      E     R   R  V   V  E     R   R
+#  SSS   EEEE  RRRR   V   V  EEEE  RRRR 
+#     S  E     R  R    V V   E     R  R
+#  SSS   EEEE  R   R    V    EEEE  R   R
+
+
+
 
 func add_level() -> void:
 	level_instance = level.instantiate()
 	add_child(level_instance)
 	# We need our level before we can grab our car controller
 	car_controller = level_instance.get_child(0)
+	vehicle_rigid_body = car_controller.get_child(0)
+	vehicle_rigid_body.name = str(multiplayer.get_unique_id())
 
+
+
+@rpc("any_peer", "reliable")
+func spawn_player(pid: int) -> void:
+	add_player(pid)
 # must always be called after add_level has been called once!
 func add_player(pid: int) -> void:
 	# Check if the player with the same pid already exists in the level
@@ -55,45 +92,97 @@ func add_player(pid: int) -> void:
 				return
 	# add the car
 	var car_instance = car.instantiate()
-	car_instance.name = str(pid)
 	car_instance.set_multiplayer_authority(pid)
+	car_instance.name = str(pid)
 	car_controller.add_child(car_instance)
 	car_instance.global_transform.origin = Vector3(0, 2, 0)
 	print("Player with ID " + str(pid) + " added to the game.")
 
 # RPC function to spawn players across all clients
-@rpc("any_peer", "call_local", "reliable")
-func spawn_player(pid: int) -> void:
-	add_player(pid)
+
+
 
 # Sync player transform
-@rpc("any_peer", "call_local", "unreliable")
+@rpc("any_peer", "unreliable")
 func update_player_transform(pid: int, transform: Transform3D) -> void:
 	var player = car_controller.get_node(str(pid))
 	if	player and pid != multiplayer.get_unique_id():
 		player.global_transform = transform
-
 func _physics_process(delta: float) -> void:
 	# Only update if we're connected
 	if multiplayer.multiplayer_peer and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
 		# Sync our car's position to other players
-		if vehicle_rigid_body and vehicle_rigid_body.name == str(multiplayer.get_unique_id()):
-			#print("update name: " + vehicle_rigid_body.name + "  uni_id: " + str(multiplayer.get_unique_id()))
+		if !multiplayer.is_server():
 			rpc("update_player_transform", multiplayer.get_unique_id(), vehicle_rigid_body.global_transform)
 
-func _on_peer_connected(pid: int) -> void:
-	# Tell new peer about existing players
-	for existing_pid in multiplayer.get_peers():
-		print("PIDS:  " + str(existing_pid))
-		rpc_id(existing_pid, "spawn_player", multiplayer.get_unique_id())
-	## Spawn new player for everyone
-	rpc("spawn_player", pid)
 
+	
+# add mods to client cars
+# This should happen on the server. same logic, but on server.
+func add_mod(mod_name):
+	for existing_pid in multiplayer.get_peers():
+		if multiplayer.get_unique_id() != existing_pid:
+			rpc_id(existing_pid, "sync_mod", multiplayer.get_unique_id(), mod_name)
+@rpc("any_peer", "unreliable")
+func sync_mod(pid, mod_name):
+	# create list of mods and their file paths
+	if car_controller.has_node(str(pid)) and !car_controller.get_node(str(pid)).has_node(mod_name):
+		var mod_path = "res://scenes/player/modules/" + mod_name + ".tscn"
+		var mod = load(mod_path)
+		mod = mod.instantiate()
+		car_controller.get_node(str(pid)).add_child(mod)
+	
+	
+	
+# from the gun mod reach out 
+# here we spawn_bullet
+# spawn bullet calls back to the gun mod, we will have to get it manually?
+# then each clients cars/gun mod will shoot?? 
+func spawn_bullet():
+	for existing_pid in multiplayer.get_peers():
+		if multiplayer.get_unique_id() != existing_pid:
+			rpc_id(existing_pid, "sync_bullet", multiplayer.get_unique_id())
+@rpc("any_peer", "unreliable")
+func sync_bullet(pid):
+	if get_child(1).get_child(0).has_node(str(pid)):
+		print("Client: " + str(pid) + " Shooting guns")
+		var gun_mod = get_child(1).get_child(0).get_node(str(pid)).get_node("gun-mod")
+		gun_mod.shoot_guns()
+		
+
+
+func emit_thrusters(emit):
+	for existing_pid in multiplayer.get_peers():
+		if multiplayer.get_unique_id() != existing_pid:
+			rpc_id(existing_pid, "sync_thrusters", multiplayer.get_unique_id(), emit)
+@rpc("any_peer", "unreliable")
+func sync_thrusters(pid, emit):
+	print('Emitting')
+	if get_child(1).get_child(0).has_node(str(pid)):
+		var jet_mod = get_child(1).get_child(0).get_node(str(pid)).get_node("JetMod")
+		if emit:
+			jet_mod.emit_thrusters()
+		else:
+			jet_mod.stop_emit_thrusters()
+
+
+
+
+func hit_body(hit_body_name):
+	for existing_pid in multiplayer.get_peers():
+		if multiplayer.get_unique_id() != existing_pid:
+			# This should be a call to update game info instead.
+			# something like update_game() that will push out updates to all clients
+			rpc_id(existing_pid, "on_hit", multiplayer.get_unique_id(), hit_body_name)
+@rpc("any_peer", "unreliable")
+func on_hit(pid, hit_body_name):
+	print("This -> " + hit_body_name + " is getting hit by: " + str(pid))
+	
+	
+	
+	
 func _on_connected_to_server() -> void:
 	print("Connected to server!")
-	var pid = multiplayer.get_unique_id()
-	vehicle_rigid_body.name = str(pid)
-	add_player(pid)
 
 func _on_connection_failed() -> void:
 	print("Connection failed!")
@@ -102,12 +191,4 @@ func _on_connection_failed() -> void:
 func _on_server_disconnected() -> void:
 	print("Server disconnected!")
 	multiplayer.multiplayer_peer = null
-	# Clean up players
-	for child in level_instance.get_children():
-		if child is Vehicle:
-			child.queue_free()
 	start.show()
-	
-@rpc("any_peer", "call_local", "unreliable")
-func on_hit():
-	print("I'm getting hit")

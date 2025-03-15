@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://62moj8uqp4q"]
+[gd_scene load_steps=6 format=3 uid="uid://62moj8uqp4q"]
 
 [ext_resource type="Script" path="res://scripts/player/gun_mod.gd" id="1_lvmn4"]
+[ext_resource type="PackedScene" uid="uid://upsyh8tgbwa5" path="res://scenes/player/modules/bullet.tscn" id="2_ns5q1"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6nkvs"]
 albedo_color = Color(0.184314, 0.184314, 0.184314, 1)
@@ -14,6 +15,7 @@ albedo_color = Color(0.18359, 0.18359, 0.18359, 1)
 [node name="gun-mod" type="Node3D"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, -0.0327481, -1.23819)
 script = ExtResource("1_lvmn4")
+bullet_scene = ExtResource("2_ns5q1")
 
 [node name="gun-1" type="CSGCombiner3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, -2)

@@ -1,9 +1,10 @@
-[gd_scene load_steps=14 format=3 uid="uid://tj5dbddvjns6"]
+[gd_scene load_steps=15 format=3 uid="uid://tj5dbddvjns6"]
 
 [ext_resource type="PackedScene" uid="uid://c3ixqkc6k13yi" path="res://addons/gevp/scenes/vehicle_controller.tscn" id="1_f0x7w"]
 [ext_resource type="PackedScene" uid="uid://cd3qphnvh8fyv" path="res://addons/gevp/scenes/drift_car.tscn" id="2_rdih2"]
 [ext_resource type="PackedScene" uid="uid://b2hlchrj4h2b7" path="res://addons/gevp/scenes/engine_sound.tscn" id="3_0f03d"]
 [ext_resource type="PackedScene" uid="uid://h6vdpba71kpr" path="res://addons/gevp/scenes/smoke_effect.tscn" id="4_ye60t"]
+[ext_resource type="PackedScene" uid="uid://62moj8uqp4q" path="res://scenes/player/modules/gun_mod.tscn" id="5_002nq"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/gui.gd" id="5_5qpvm"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/camera.gd" id="6_jbu2j"]
 [ext_resource type="PackedScene" uid="uid://cnqvqh5wgh37s" path="res://scenes/levels/level1-map.tscn" id="7_bhkx2"]
@@ -29,6 +30,8 @@ vehicle = NodePath("..")
 
 [node name="Smoke" parent="VehicleController/VehicleRigidBody" node_paths=PackedStringArray("vehicle") instance=ExtResource("4_ye60t")]
 vehicle = NodePath("..")
+
+[node name="gun-mod" parent="VehicleController/VehicleRigidBody" instance=ExtResource("5_002nq")]
 
 [node name="GUI" type="Control" parent="." node_paths=PackedStringArray("vehicle")]
 layout_mode = 3
@@ -105,3 +108,8 @@ transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 76.3732, 0.598742, 19.6
 
 [node name="GunModItem8" parent="Items" instance=ExtResource("13_5oka7")]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 78.4257, 0.598738, 11.7576)
+
+[node name="HostCam" type="Camera3D" parent="."]
+transform = Transform3D(-0.825186, -0.434732, 0.36066, -0.0937997, 0.73509, 0.67145, -0.557018, 0.520241, -0.647364, 5.56504, 22.4198, -12.6708)
+
+[node name="Bullets" type="Node3D" parent="."]

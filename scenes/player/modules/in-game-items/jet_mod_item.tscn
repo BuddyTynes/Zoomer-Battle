@@ -1,6 +1,6 @@
 [gd_scene load_steps=8 format=3 uid="uid://bbpgrkrwanvis"]
 
-[ext_resource type="Script" path="res://scenes/player/modules/in-game-items/gun_mod_item.gd" id="1_q1q8x"]
+[ext_resource type="Script" path="res://scenes/player/modules/in-game-items/mod_item.gd" id="1_q1q8x"]
 [ext_resource type="PackedScene" uid="uid://do70wir11avc5" path="res://scenes/player/modules/jet_mod.tscn" id="2_17ol2"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mjjgh"]
@@ -47,10 +47,11 @@ _data = {
 [sub_resource type="BoxShape3D" id="BoxShape3D_cxd2j"]
 size = Vector3(10, 15, 1)
 
-[node name="GunModItem" type="Node3D"]
+[node name="JetModItem" type="Node3D"]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
 script = ExtResource("1_q1q8x")
 mod = ExtResource("2_17ol2")
+mod_name = "jet_mod"
 
 [node name="gun" type="CSGCombiner3D" parent="."]
 
