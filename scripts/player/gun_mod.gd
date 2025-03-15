@@ -43,7 +43,6 @@ func shoot_guns() -> void:
 	bullet.transform.basis = gun_pos.global_transform.basis
 	bullet.linear_velocity = gun_pos.global_transform.basis.z * BULLET_SPEED
 	bullet.set_pid(pid) # check which PID bullet is fired from
-	print("Bullet spawn position: ", bullet.transform.origin)
 	main.get_child(1).add_child(bullet)
 	
 func _add_mod_on_clients():

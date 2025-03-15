@@ -35,7 +35,6 @@ func apply_thrust() -> void:
 	vehicle.apply_central_force(right_thrust_vector)
 	
 func emit_thrusters():
-	print("In the Emit THrusters on jet mod!!!")
 	left_jet.emitting = true
 	right_jet.emitting = true
 	is_thrust_active = true

@@ -1,6 +1,9 @@
 extends Node3D
 
 @onready var start: Control = $UI/Start
+@onready var game_state = preload("res://scripts/resources/game-state.tres")
+@onready var port = $UI/Start/VBoxContainer/Port
+@onready var ip = $UI/Start/VBoxContainer/IP
 
 var peer = ENetMultiplayerPeer.new()
 var level = preload("res://scenes/levels/level1.tscn")
@@ -9,6 +12,7 @@ var level_instance: Node3D
 var vehicle_rigid_body : Vehicle
 var car_controller : VehicleController # assigned in add_level()
 
+
 func _ready() -> void:
 	# Set up multiplayer authority
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -16,7 +20,8 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 func _on_host_pressed() -> void:
-	var error = peer.create_server(42069, 9)
+	var port = int(port.text)
+	var error = peer.create_server(port, 9)
 	if !error:
 		start.hide()
 		multiplayer.multiplayer_peer = peer
@@ -35,8 +40,8 @@ func _on_host_pressed() -> void:
 		print("Failed to create server: ", error)
 		
 func _on_join_pressed() -> void:
-	#var error = peer.create_client("99.108.174.198", 42069)
-	var error = peer.create_client("localhost", 42069)
+	var port = int(port.text)
+	var error = peer.create_client(ip.text, port)
 	if !error:
 		multiplayer.multiplayer_peer = peer
 		start.hide()
@@ -67,8 +72,6 @@ func _on_peer_connected(pid: int) -> void:
 #  SSS   EEEE  R   R    V    EEEE  R   R
 
 
-
-
 func add_level() -> void:
 	level_instance = level.instantiate()
 	add_child(level_instance)
@@ -76,7 +79,6 @@ func add_level() -> void:
 	car_controller = level_instance.get_child(0)
 	vehicle_rigid_body = car_controller.get_child(0)
 	vehicle_rigid_body.name = str(multiplayer.get_unique_id())
-
 
 
 @rpc("any_peer", "reliable")
@@ -90,6 +92,8 @@ func add_player(pid: int) -> void:
 			if child.name == str(pid):
 				print("Player with ID " + str(pid) + " already exists.")
 				return
+	if multiplayer.is_server():
+		game_state.add_player(str(pid), 500, 100)
 	# add the car
 	var car_instance = car.instantiate()
 	car_instance.set_multiplayer_authority(pid)
@@ -145,7 +149,6 @@ func spawn_bullet():
 @rpc("any_peer", "unreliable")
 func sync_bullet(pid):
 	if get_child(1).get_child(0).has_node(str(pid)):
-		print("Client: " + str(pid) + " Shooting guns")
 		var gun_mod = get_child(1).get_child(0).get_node(str(pid)).get_node("gun-mod")
 		gun_mod.shoot_guns()
 		
@@ -157,7 +160,6 @@ func emit_thrusters(emit):
 			rpc_id(existing_pid, "sync_thrusters", multiplayer.get_unique_id(), emit)
 @rpc("any_peer", "unreliable")
 func sync_thrusters(pid, emit):
-	print('Emitting')
 	if get_child(1).get_child(0).has_node(str(pid)):
 		var jet_mod = get_child(1).get_child(0).get_node(str(pid)).get_node("JetMod")
 		if emit:
@@ -169,14 +171,11 @@ func sync_thrusters(pid, emit):
 
 
 func hit_body(hit_body_name):
-	for existing_pid in multiplayer.get_peers():
-		if multiplayer.get_unique_id() != existing_pid:
-			# This should be a call to update game info instead.
-			# something like update_game() that will push out updates to all clients
-			rpc_id(existing_pid, "on_hit", multiplayer.get_unique_id(), hit_body_name)
+	rpc_id(1, "player_hit", hit_body_name)
 @rpc("any_peer", "unreliable")
-func on_hit(pid, hit_body_name):
+func player_hit(pid, hit_body_name):
 	print("This -> " + hit_body_name + " is getting hit by: " + str(pid))
+	print(game_state)
 	
 	
 	
