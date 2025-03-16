@@ -16,7 +16,6 @@ func _on_area_3d_body_entered(body: Node3D) -> void:
 	if body.name == str(multiplayer.get_unique_id()):
 		# return early if we already have the mod.
 		for child in body.get_children():
-			print(child.name)
 			if child.name == mod.name: 
 				print("We already have this mod!")
 				return

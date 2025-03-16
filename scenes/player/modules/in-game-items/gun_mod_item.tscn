@@ -1,6 +1,6 @@
 [gd_scene load_steps=7 format=3 uid="uid://cydjcmnmkscxl"]
 
-[ext_resource type="Script" path="res://scenes/player/modules/in-game-items/mod_item.gd" id="1_cgdme"]
+[ext_resource type="Script" path="res://scripts/player/modules/in-game-items/mod_item.gd" id="1_cgdme"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mjjgh"]
 albedo_color = Color(0.340339, 0.340339, 0.340339, 1)

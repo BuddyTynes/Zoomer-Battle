@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://62moj8uqp4q"]
 
 [ext_resource type="Script" path="res://scripts/player/gun_mod.gd" id="1_lvmn4"]
-[ext_resource type="PackedScene" uid="uid://upsyh8tgbwa5" path="res://scenes/player/modules/bullet.tscn" id="2_ns5q1"]
+[ext_resource type="PackedScene" uid="uid://upsyh8tgbwa5" path="res://scenes/player/modules/sub-mod/bullet.tscn" id="2_ns5q1"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6nkvs"]
 albedo_color = Color(0.184314, 0.184314, 0.184314, 1)

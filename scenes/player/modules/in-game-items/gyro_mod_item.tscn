@@ -1,8 +1,8 @@
 [gd_scene load_steps=26 format=4 uid="uid://djoxluxtuoaly"]
 
-[ext_resource type="Script" path="res://scenes/player/modules/in-game-items/mod_item.gd" id="1_j824x"]
+[ext_resource type="Script" path="res://scripts/player/modules/in-game-items/mod_item.gd" id="1_j824x"]
 [ext_resource type="PackedScene" uid="uid://pdgtan28wgfr" path="res://scenes/player/modules/gyro_mod.tscn" id="2_qcxjc"]
-[ext_resource type="Script" path="res://scenes/player/modules/in-game-items/gyro_mod_spinner.gd" id="4_od631"]
+[ext_resource type="Script" path="res://scripts/player/modules/in-game-items/gyro_mod_spinner.gd" id="4_od631"]
 
 [sub_resource type="Animation" id="Animation_tptd8"]
 length = 0.001
