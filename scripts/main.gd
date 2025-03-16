@@ -173,7 +173,7 @@ func sync_thrusters(pid, emit):
 
 func hit_body(hit_body_name, pid):
 	var player = game_state.get_player(hit_body_name)
-	player.health = player.health - 10
+	player.health = player.health - 30
 	game_state.update_player(str(pid), player.health, player.defense)
 	if player.health <= 0:
 		rpc("player_dead", pid, hit_body_name)
