@@ -95,6 +95,16 @@ inner_radius = 0.85576
 outer_radius = 1.46139
 sides = 23
 
+[node name="CSGTorus3D2" type="CSGTorus3D" parent="greyboxing"]
+transform = Transform3D(14.2398, -31.3335, -12.8637, 1.45413e-07, 20.6765, -25.4658, 25.7274, 17.3427, 7.11991, -195.285, 154.422, 272.309)
+inner_radius = 0.709885
+outer_radius = 1.1751
+sides = 23
+
+[node name="CSGBox3D" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 68.617, 1.93335, 2.69052)
+size = Vector3(1.92078, 2.80811, 2.83057)
+
 [node name="ground" type="CSGBox3D" parent="."]
 transform = Transform3D(1000, -0.000144377, -0.459985, 0.0721551, 2, -0.0726034, 0.45999, 0.00014514, 1000, 0, -1, 0)
 use_collision = true
