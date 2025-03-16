@@ -105,6 +105,111 @@ sides = 23
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 68.617, 1.93335, 2.69052)
 size = Vector3(1.92078, 2.80811, 2.83057)
 
+[node name="road-6" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(6.27537, 0, 0, 0, 0.593749, 16.8082, 0, -0.342801, 29.1127, 50, 4.5, 50)
+use_collision = true
+size = Vector3(2, 0.5, 0.5)
+
+[node name="road-7" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(6.27537, 0, 0, 0, 0.593749, -16.8082, 0, 0.342801, 29.1127, 50, 4.5, 75)
+use_collision = true
+size = Vector3(2, 0.5, 0.5)
+
+[node name="road-9" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(6.27537, 0, 0, 0, 0.593749, -16.8082, 0, 0.342801, 29.1127, -50, 4.5, -50)
+use_collision = true
+size = Vector3(2, 0.5, 0.5)
+
+[node name="road-10" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(6.27537, 0, 0, 0, 0.593749, 16.8082, 0, -0.342801, 29.1127, 50, 4.5, 50)
+use_collision = true
+size = Vector3(2, 0.5, 0.5)
+
+[node name="road-11" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(6.27537, 0, 0, 0, 0.593749, -16.8082, 0, 0.342801, 29.1127, 50, 4.5, 75)
+use_collision = true
+size = Vector3(2, 0.5, 0.5)
+
+[node name="Ramp Platform" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 100, 8.3, 100)
+size = Vector3(10, 1, 10)
+
+[node name="Ramp Platform" type="CSGBox3D" parent="greyboxing/Ramp Platform"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 0, -4, 12)
+size = Vector3(10, 1, 16.5)
+
+[node name="Ramp Platform2" type="CSGBox3D" parent="greyboxing/Ramp Platform"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, -4, -12)
+size = Vector3(10, 1, 16.5)
+
+[node name="Ramp Platform3" type="CSGBox3D" parent="greyboxing/Ramp Platform"]
+transform = Transform3D(0.866025, -0.5, 0, 0.5, 0.866025, 0, 0, 0, 1, -12, -4, 0)
+size = Vector3(16.5, 1, 10)
+
+[node name="Ramp Platform4" type="CSGBox3D" parent="greyboxing/Ramp Platform"]
+transform = Transform3D(0.866025, 0.5, 0, -0.5, 0.866025, 0, 0, 0, 1, 12, -4, 0)
+size = Vector3(16.5, 1, 10)
+
+[node name="Ramp Platform2" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -100, 8.3, -100)
+size = Vector3(10, 1, 10)
+
+[node name="Ramp Platform" type="CSGBox3D" parent="greyboxing/Ramp Platform2"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 0, -4, 12)
+size = Vector3(10, 1, 16.5)
+
+[node name="Ramp Platform2" type="CSGBox3D" parent="greyboxing/Ramp Platform2"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, -4, -12)
+size = Vector3(10, 1, 16.5)
+
+[node name="Ramp Platform3" type="CSGBox3D" parent="greyboxing/Ramp Platform2"]
+transform = Transform3D(0.866025, -0.5, 0, 0.5, 0.866025, 0, 0, 0, 1, -12, -4, 0)
+size = Vector3(16.5, 1, 10)
+
+[node name="Ramp Platform4" type="CSGBox3D" parent="greyboxing/Ramp Platform2"]
+transform = Transform3D(0.866025, 0.5, 0, -0.5, 0.866025, 0, 0, 0, 1, 12, -4, 0)
+size = Vector3(16.5, 1, 10)
+
+[node name="Ramp Platform3" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 100, 8.3, -100)
+size = Vector3(10, 1, 10)
+
+[node name="Ramp Platform" type="CSGBox3D" parent="greyboxing/Ramp Platform3"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 0, -4, 12)
+size = Vector3(10, 1, 16.5)
+
+[node name="Ramp Platform2" type="CSGBox3D" parent="greyboxing/Ramp Platform3"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, -4, -12)
+size = Vector3(10, 1, 16.5)
+
+[node name="Ramp Platform3" type="CSGBox3D" parent="greyboxing/Ramp Platform3"]
+transform = Transform3D(0.866025, -0.5, 0, 0.5, 0.866025, 0, 0, 0, 1, -12, -4, 0)
+size = Vector3(16.5, 1, 10)
+
+[node name="Ramp Platform4" type="CSGBox3D" parent="greyboxing/Ramp Platform3"]
+transform = Transform3D(0.866025, 0.5, 0, -0.5, 0.866025, 0, 0, 0, 1, 12, -4, 0)
+size = Vector3(16.5, 1, 10)
+
+[node name="Ramp Platform4" type="CSGBox3D" parent="greyboxing"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -100, 8.3, 100)
+size = Vector3(10, 1, 10)
+
+[node name="Ramp Platform" type="CSGBox3D" parent="greyboxing/Ramp Platform4"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 0, -4, 12)
+size = Vector3(10, 1, 16.5)
+
+[node name="Ramp Platform2" type="CSGBox3D" parent="greyboxing/Ramp Platform4"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, -4, -12)
+size = Vector3(10, 1, 16.5)
+
+[node name="Ramp Platform3" type="CSGBox3D" parent="greyboxing/Ramp Platform4"]
+transform = Transform3D(0.866025, -0.5, 0, 0.5, 0.866025, 0, 0, 0, 1, -12, -4, 0)
+size = Vector3(16.5, 1, 10)
+
+[node name="Ramp Platform4" type="CSGBox3D" parent="greyboxing/Ramp Platform4"]
+transform = Transform3D(0.866025, 0.5, 0, -0.5, 0.866025, 0, 0, 0, 1, 12, -4, 0)
+size = Vector3(16.5, 1, 10)
+
 [node name="ground" type="CSGBox3D" parent="."]
 transform = Transform3D(1000, -0.000144377, -0.459985, 0.0721551, 2, -0.0726034, 0.45999, 0.00014514, 1000, 0, -1, 0)
 use_collision = true
