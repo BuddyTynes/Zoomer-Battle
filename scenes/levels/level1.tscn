@@ -32,7 +32,7 @@ rear_camber = 0.136
 coefficient_of_drag = 0.01
 
 [node name="EngineSound" parent="VehicleController/VehicleRigidBody" node_paths=PackedStringArray("vehicle") instance=ExtResource("3_0f03d")]
-volume_db = -3.067
+unit_size = 1.0
 vehicle = NodePath("..")
 
 [node name="Smoke" parent="VehicleController/VehicleRigidBody" node_paths=PackedStringArray("vehicle") instance=ExtResource("4_ye60t")]
