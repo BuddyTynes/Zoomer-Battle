@@ -19,7 +19,7 @@ func update_player(player_id: String, health: int, defense: int) -> void:
 	if players.has(player_id):
 		players[player_id]["health"] = health
 		players[player_id]["defense"] = defense
-		print("Player", player_id, "updated to Health:", health, "and Defense:", defense)
+		print("Player: ", player_id, "updated to Health: ", health, "and Defense: ", defense)
 	else:
 		print("Player", player_id, "not found!")
 

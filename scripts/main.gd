@@ -172,13 +172,23 @@ func sync_thrusters(pid, emit):
 
 
 func hit_body(hit_body_name, pid):
-	print("This -> " + hit_body_name + " is getting hit by: " + str(pid))
-	print(game_state)
+	var player = game_state.get_player(hit_body_name)
+	player.health = player.health - 10
+	game_state.update_player(str(pid), player.health, player.defense)
+	if player.health <= 0:
+		rpc("player_dead", pid, hit_body_name)
 @rpc("any_peer", "unreliable")
-func player_hit(pid, hit_body_name):
-	print("This -> " + hit_body_name + " is getting hit by: " + str(pid))
-	print(game_state)
-	
+func player_dead(pid, hit_body_name):
+	var player = car_controller.get_node(str(hit_body_name))
+	if player:
+		var player_pos = player.global_position
+		player.hide()
+		var explosion = preload("res://scenes/player/death/death.tscn")
+		explosion = explosion.instantiate()
+		get_tree().get_root().add_child(explosion)
+		await get_tree().create_timer(2).timeout
+		if explosion: explosion.queue_free()
+		if player: player.hide()
 	
 	
 	

@@ -6,14 +6,14 @@
 offsets = PackedFloat32Array(0.412664, 0.989083)
 colors = PackedColorArray(0.652722, 0.134646, 9.62615e-08, 1, 0.968627, 0.796078, 0.192157, 1)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_xqmaa"]
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_uskbw"]
 gradient = SubResource("Gradient_mq86c")
 
 [sub_resource type="Curve" id="Curve_30v1v"]
 _data = [Vector2(0, 0.591258), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
 point_count = 2
 
-[sub_resource type="CurveTexture" id="CurveTexture_olk6s"]
+[sub_resource type="CurveTexture" id="CurveTexture_4ier1"]
 curve = SubResource("Curve_30v1v")
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_tbsnm"]
@@ -26,10 +26,10 @@ initial_velocity_max = 20.0
 angular_velocity_min = -1.60933e-05
 angular_velocity_max = 40.0
 gravity = Vector3(0, 0, 0)
-scale_curve = SubResource("CurveTexture_olk6s")
-color_initial_ramp = SubResource("GradientTexture1D_xqmaa")
+scale_curve = SubResource("CurveTexture_4ier1")
+color_initial_ramp = SubResource("GradientTexture1D_uskbw")
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2yxuw"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_goks4"]
 transparency = 1
 blend_mode = 1
 shading_mode = 0
@@ -42,7 +42,7 @@ particles_anim_v_frames = 1
 particles_anim_loop = false
 
 [sub_resource type="QuadMesh" id="QuadMesh_odkdj"]
-material = SubResource("StandardMaterial3D_2yxuw")
+material = SubResource("StandardMaterial3D_goks4")
 
 [node name="JetMod" type="Node3D"]
 script = ExtResource("1_3703l")

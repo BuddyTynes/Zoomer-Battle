@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://upsyh8tgbwa5"]
+[gd_scene load_steps=13 format=3 uid="uid://upsyh8tgbwa5"]
 
 [ext_resource type="Script" path="res://scripts/player/bullet.gd" id="1_n16ep"]
 
@@ -18,6 +18,55 @@ height = 0.2
 [sub_resource type="SphereShape3D" id="SphereShape3D_1torf"]
 radius = 0.15
 
+[sub_resource type="Gradient" id="Gradient_51xk8"]
+offsets = PackedFloat32Array(0.015534, 0.506796, 1)
+colors = PackedColorArray(0.633253, 0.0944872, 0.0205294, 1, 0.372549, 0.796078, 0.192157, 1, 0.466667, 0.117647, 0.784314, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_hyskj"]
+gradient = SubResource("Gradient_51xk8")
+
+[sub_resource type="Curve" id="Curve_kniy6"]
+_data = [Vector2(0, 0.591258), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_7nlb8"]
+curve = SubResource("Curve_kniy6")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_4rtn0"]
+angle_min = -60.3
+angle_max = 42.2
+direction = Vector3(0, 1, 0)
+spread = 0.0
+initial_velocity_min = 1.0
+initial_velocity_max = 2.0
+angular_velocity_min = -1.60933e-05
+angular_velocity_max = 40.0
+radial_velocity_min = -2.00002
+radial_velocity_max = 1.99998
+gravity = Vector3(0, 0, 0)
+scale_min = 0.2
+scale_max = 0.5
+scale_curve = SubResource("CurveTexture_7nlb8")
+color_initial_ramp = SubResource("GradientTexture1D_hyskj")
+hue_variation_min = -1.0
+hue_variation_max = 0.25
+turbulence_noise_strength = 4.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mxxy6"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(0.964706, 0.54902, 0.254902, 1)
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_djlcv"]
+material = SubResource("StandardMaterial3D_mxxy6")
+
 [node name="Bullet" type="RigidBody3D"]
 collision_layer = 2
 collision_mask = 2
@@ -33,6 +82,13 @@ mesh = SubResource("SphereMesh_6ye33")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
 shape = SubResource("SphereShape3D_1torf")
+
+[node name="trail" type="GPUParticles3D" parent="."]
+transform = Transform3D(-0.826308, -2.0067e-15, -0.565594, 0, 1.00134, -3.55271e-15, 0.565594, -2.9317e-15, -0.826308, 0, 0, 0)
+amount = 10
+lifetime = 0.29
+process_material = SubResource("ParticleProcessMaterial_4rtn0")
+draw_pass_1 = SubResource("QuadMesh_djlcv")
 
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]
 [connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
