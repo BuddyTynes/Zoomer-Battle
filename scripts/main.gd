@@ -190,6 +190,8 @@ func player_dead(pid, hit_body_name):
 		await get_tree().create_timer(2).timeout
 		if explosion: explosion.queue_free()
 		if player: player.hide()
+		# detach player
+		# wait then re-spawn
 	
 	
 	

@@ -1,10 +1,7 @@
-[gd_scene load_steps=15 format=3 uid="uid://tj5dbddvjns6"]
+[gd_scene load_steps=12 format=3 uid="uid://tj5dbddvjns6"]
 
 [ext_resource type="PackedScene" uid="uid://c3ixqkc6k13yi" path="res://addons/gevp/scenes/vehicle_controller.tscn" id="1_f0x7w"]
-[ext_resource type="PackedScene" uid="uid://cd3qphnvh8fyv" path="res://addons/gevp/scenes/drift_car.tscn" id="2_rdih2"]
-[ext_resource type="PackedScene" uid="uid://b2hlchrj4h2b7" path="res://addons/gevp/scenes/engine_sound.tscn" id="3_0f03d"]
-[ext_resource type="PackedScene" uid="uid://h6vdpba71kpr" path="res://addons/gevp/scenes/smoke_effect.tscn" id="4_ye60t"]
-[ext_resource type="PackedScene" uid="uid://62moj8uqp4q" path="res://scenes/player/modules/gun_mod.tscn" id="5_002nq"]
+[ext_resource type="PackedScene" uid="uid://bx8fhhfwam6q0" path="res://addons/gevp/scenes/monster_truck.tscn" id="2_pvgqn"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/gui.gd" id="5_5qpvm"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/camera.gd" id="6_jbu2j"]
 [ext_resource type="PackedScene" uid="uid://cnqvqh5wgh37s" path="res://scenes/levels/level1-map.tscn" id="7_bhkx2"]
@@ -21,24 +18,7 @@
 transform = Transform3D(-0.994015, 0, 0.109248, 0, 1, 0, -0.109248, 0, -0.994015, 0, 1.09154, 0)
 vehicle_node = NodePath("VehicleRigidBody")
 
-[node name="VehicleRigidBody" parent="VehicleController" instance=ExtResource("2_rdih2")]
-max_torque = 1400.0
-max_rpm = 10000.0
-motor_brake = 0.0
-front_torque_split = 0.5
-variable_torque_split = true
-front_camber = 0.136
-rear_camber = 0.136
-coefficient_of_drag = 0.01
-
-[node name="EngineSound" parent="VehicleController/VehicleRigidBody" node_paths=PackedStringArray("vehicle") instance=ExtResource("3_0f03d")]
-unit_size = 1.0
-vehicle = NodePath("..")
-
-[node name="Smoke" parent="VehicleController/VehicleRigidBody" node_paths=PackedStringArray("vehicle") instance=ExtResource("4_ye60t")]
-vehicle = NodePath("..")
-
-[node name="gun-mod" parent="VehicleController/VehicleRigidBody" instance=ExtResource("5_002nq")]
+[node name="VehicleRigidBody" parent="VehicleController" instance=ExtResource("2_pvgqn")]
 
 [node name="GUI" type="Control" parent="." node_paths=PackedStringArray("vehicle")]
 layout_mode = 3
