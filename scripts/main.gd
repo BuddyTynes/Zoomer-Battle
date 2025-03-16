@@ -185,6 +185,7 @@ func player_dead(pid, hit_body_name):
 		player.hide()
 		var explosion = preload("res://scenes/player/death/death.tscn")
 		explosion = explosion.instantiate()
+		explosion.global_position = player_pos
 		get_tree().get_root().add_child(explosion)
 		await get_tree().create_timer(2).timeout
 		if explosion: explosion.queue_free()
