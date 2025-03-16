@@ -15,10 +15,12 @@ var time_since_last_shot = 0.0
 var right = false
 var pid
 var main
+var vehicle_container
 
 func _ready() -> void:
-	pid = multiplayer.get_unique_id()
+	pid = vehicle.name
 	main = get_tree().root.get_child(0)
+	vehicle_container = vehicle.get_parent()
 	# we will tell the server that we need to sync mods after timer
 	timer.wait_time = 2.0  # Set the time in seconds
 	timer.one_shot = true  # Stops after one cycle
@@ -43,7 +45,9 @@ func shoot_guns() -> void:
 	bullet.transform.basis = gun_pos.global_transform.basis
 	bullet.linear_velocity = gun_pos.global_transform.basis.z * BULLET_SPEED
 	bullet.set_pid(pid) # check which PID bullet is fired from
+	bullet.set_target_container(vehicle_container)
 	main.get_child(1).add_child(bullet)
 	
 func _add_mod_on_clients():
 	main.add_mod("gun_mod")
+	pid = vehicle.name #re-assign here after 2 seconds so spawning mods can have correct PID

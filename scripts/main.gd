@@ -20,7 +20,7 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 func _on_host_pressed() -> void:
-	var port = int(port.text)
+	port = int(port.text) if port.text != "" else 42069
 	var error = peer.create_server(port, 9)
 	if !error:
 		start.hide()
@@ -40,8 +40,9 @@ func _on_host_pressed() -> void:
 		print("Failed to create server: ", error)
 		
 func _on_join_pressed() -> void:
-	var port = int(port.text)
-	var error = peer.create_client(ip.text, port)
+	port = int(port.text) if port.text != "" else 42069
+	ip = ip.text if ip.text != "" else "localhost"
+	var error = peer.create_client(ip, port)
 	if !error:
 		multiplayer.multiplayer_peer = peer
 		start.hide()
@@ -170,8 +171,9 @@ func sync_thrusters(pid, emit):
 
 
 
-func hit_body(hit_body_name):
-	rpc_id(1, "player_hit", hit_body_name)
+func hit_body(hit_body_name, pid):
+	print("This -> " + hit_body_name + " is getting hit by: " + str(pid))
+	print(game_state)
 @rpc("any_peer", "unreliable")
 func player_hit(pid, hit_body_name):
 	print("This -> " + hit_body_name + " is getting hit by: " + str(pid))

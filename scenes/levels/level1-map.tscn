@@ -10,7 +10,7 @@ albedo_texture = ExtResource("2_gttk6")
 uv1_triplanar = true
 uv1_world_triplanar = true
 
-[node name="level" type="Node3D"]
+[node name="level" type="Node3D" groups=["Road"]]
 
 [node name="greyboxing" type="CSGCombiner3D" parent="."]
 use_collision = true

@@ -22,8 +22,14 @@ transform = Transform3D(-0.994015, 0, 0.109248, 0, 1, 0, -0.109248, 0, -0.994015
 vehicle_node = NodePath("VehicleRigidBody")
 
 [node name="VehicleRigidBody" parent="VehicleController" instance=ExtResource("2_rdih2")]
+max_torque = 1400.0
+max_rpm = 10000.0
+motor_brake = 0.0
+front_torque_split = 0.5
+variable_torque_split = true
 front_camber = 0.136
 rear_camber = 0.136
+coefficient_of_drag = 0.01
 
 [node name="EngineSound" parent="VehicleController/VehicleRigidBody" node_paths=PackedStringArray("vehicle") instance=ExtResource("3_0f03d")]
 vehicle = NodePath("..")

@@ -32,8 +32,8 @@ func stablize_car(delta):
 	vehicle.apply_torque_impulse(stabilization_torque * delta)
 
 	# Control rotation with right thumbstick
-	var pitch_input = (Input.get_action_strength("ui_right_stick_up") - Input.get_action_strength("ui_right_stick_down")) * -1
-	var roll_input = Input.get_action_strength("ui_right_stick_left") - Input.get_action_strength("ui_right_stick_right")
+	var pitch_input = (Input.get_action_strength("ui_left_stick_up") - Input.get_action_strength("ui_left_stick_down")) * -1
+	var roll_input = Input.get_action_strength("ui_left_stick_left") - Input.get_action_strength("ui_left_stick_right")
 	var pitch_torque = global_transform.basis.x * pitch_input * ROTATION_SPEED
 	var roll_torque = global_transform.basis.y * roll_input * ROTATION_SPEED
 	
