@@ -46,5 +46,6 @@ func shoot_guns() -> void:
 	main.get_child(1).add_child(bullet)
 	
 func _add_mod_on_clients():
-	main.add_mod("gun_mod")
 	pid = vehicle.name #re-assign here after 2 seconds so spawning mods can have correct PID
+	main.add_mod("gun_mod")
+	

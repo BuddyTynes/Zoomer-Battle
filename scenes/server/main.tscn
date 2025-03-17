@@ -1714,7 +1714,7 @@ offset_bottom = 91.6035
 
 [node name="MTSubViewport" type="SubViewport" parent="UI/Start/CarSelect/TabSelect/Monster Truck/MonsterTruckView"]
 handle_input_locally = false
-render_target_update_mode = 4
+render_target_update_mode = 0
 
 [node name="Camera3D" type="Camera3D" parent="UI/Start/CarSelect/TabSelect/Monster Truck/MonsterTruckView/MTSubViewport"]
 transform = Transform3D(-1, 0, -8.74228e-08, -3.40408e-08, 0.921077, 0.389381, 8.05231e-08, 0.389381, -0.921077, 0, 3.45991, -5.61508)

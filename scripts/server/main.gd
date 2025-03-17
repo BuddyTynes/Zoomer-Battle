@@ -11,7 +11,7 @@ var car = preload("res://addons/gevp/scenes/drift_car.tscn")
 var level_instance: Node3D
 var vehicle_rigid_body : Vehicle
 var car_controller : VehicleController # assigned in add_level()
-
+var car_scene
 
 func _ready() -> void:
 	# Set up multiplayer authority
@@ -35,6 +35,10 @@ func _on_host_pressed() -> void:
 		level_instance.get_node("Camera3D").queue_free()
 		level_instance.get_node("VehicleController").set_script(null)
 		level_instance.get_node("VehicleController").get_child(0).queue_free()
+		print("Children names.")
+		for child in level_instance.get_node("VehicleController").get_children():
+			print(child.name)
+			child.queue_free()
 		print("Server started ...")
 	else:
 		print("Failed to create server: ", error)
@@ -47,6 +51,8 @@ func _on_join_pressed() -> void:
 		multiplayer.multiplayer_peer = peer
 		start.hide()
 		add_level()
+		await get_tree().create_timer(.1).timeout
+		rpc_id(1, "set_peer_data", multiplayer.get_unique_id(), car_scene)
 	else:
 		print("Failed to join server: ", error)
 
@@ -57,18 +63,23 @@ func _on_join_pressed() -> void:
 #  SSS   EEEE  R   R    V    EEEE  R   R
 @rpc("any_peer")
 func _on_peer_connected(pid: int) -> void:
+	pass
+@rpc("any_peer")
+func set_peer_data(pid: int, car_scene) -> void:
 	# Tell new peer about existing players
 	print("Peer Connectred ... ID: " + str(pid))
 	if multiplayer.is_server():
 		for existing_pid in multiplayer.get_peers():
 			if existing_pid != pid:
-				rpc_id(existing_pid, "spawn_player", pid)
-				rpc_id(pid, "spawn_player", existing_pid)
+				rpc_id(existing_pid, "spawn_player", pid, car_scene)
+				var existing = game_state.get_player(str(existing_pid)) # get the correct scene for existing player.
+				rpc_id(pid, "spawn_player", existing_pid, existing.scene)
 				
-		add_player(pid)
-#  SSS   EEEE  RRRR   V   V  EEEE  RRRR 
+		add_player(pid, car_scene)
+		
+#  SSS   EEEE  RRRR   V   V  EEEE  RRRR
 # S      E     R   R  V   V  E     R   R
-#  SSS   EEEE  RRRR   V   V  EEEE  RRRR 
+#  SSS   EEEE  RRRR   V   V  EEEE  RRRR
 #     S  E     R  R    V V   E     R  R
 #  SSS   EEEE  R   R    V    EEEE  R   R
 
@@ -77,17 +88,18 @@ func add_level() -> void:
 	level_instance = level.instantiate()
 	level_instance.replace_player_car(car)
 	add_child(level_instance)
+	start.get_child(1).queue_free()
 	# We need our level before we can grab our car controller
 	car_controller = level_instance.get_child(0)
-	vehicle_rigid_body = car_controller.get_child(0)
+	vehicle_rigid_body = car_controller.get_child(1)
 	vehicle_rigid_body.name = str(multiplayer.get_unique_id())
 
 
 @rpc("any_peer", "reliable")
-func spawn_player(pid: int) -> void:
-	add_player(pid)
+func spawn_player(pid: int, car_scene) -> void:
+	add_player(pid, car_scene)
 # must always be called after add_level has been called once!
-func add_player(pid: int) -> void:
+func add_player(pid: int, car_scene) -> void:
 	# Check if the player with the same pid already exists in the level
 	if level_instance:
 		for child in level_instance.get_node("VehicleController").get_children():
@@ -95,8 +107,9 @@ func add_player(pid: int) -> void:
 				print("Player with ID " + str(pid) + " already exists.")
 				return
 	if multiplayer.is_server():
-		game_state.add_player(str(pid), 500, 100)
+		game_state.add_player(str(pid), 500, 100, car_scene)
 	# add the car
+	car = load(car_scene) # almost done, use game state isntead!
 	var car_instance = car.instantiate()
 	car_instance.set_multiplayer_authority(pid)
 	car_instance.name = str(pid)
@@ -122,7 +135,6 @@ func _physics_process(delta: float) -> void:
 			rpc("update_player_transform", multiplayer.get_unique_id(), vehicle_rigid_body.global_transform)
 
 
-	
 # add mods to client cars
 # This should happen on the server. same logic, but on server.
 func add_mod(mod_name):
@@ -195,6 +207,7 @@ func player_dead(pid, hit_body_name):
 		# wait then re-spawn
 	
 func set_car_scene(scene):
+	car_scene = scene
 	car = load(scene)
 	
 func _on_connected_to_server() -> void:

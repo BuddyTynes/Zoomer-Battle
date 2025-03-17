@@ -4,13 +4,14 @@ class_name GameStateResource
 var players := {}
 
 # Add a new player to the list
-func add_player(player_id: String, health: int, defense: int) -> void:
+func add_player(player_id: String, health: int, defense: int, car_scene: String) -> void:
+	# add more data to gamestate here.
 	if not players.has(player_id):
 		players[player_id] = {
 			"health": health,
-			"defense": defense
+			"defense": defense,
+			"scene": car_scene
 		}
-		print("Player", player_id, "added with Health:", health, "and Defense:", defense)
 	else:
 		print("Player", player_id, "already exists!")
 
@@ -19,7 +20,6 @@ func update_player(player_id: String, health: int, defense: int) -> void:
 	if players.has(player_id):
 		players[player_id]["health"] = health
 		players[player_id]["defense"] = defense
-		print("Player: ", player_id, "updated to Health: ", health, "and Defense: ", defense)
 	else:
 		print("Player", player_id, "not found!")
 
