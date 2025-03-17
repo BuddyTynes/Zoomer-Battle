@@ -75,6 +75,7 @@ func _on_peer_connected(pid: int) -> void:
 
 func add_level() -> void:
 	level_instance = level.instantiate()
+	level_instance.replace_player_car(car)
 	add_child(level_instance)
 	# We need our level before we can grab our car controller
 	car_controller = level_instance.get_child(0)
@@ -193,7 +194,8 @@ func player_dead(pid, hit_body_name):
 		# detach player
 		# wait then re-spawn
 	
-	
+func set_car_scene(scene):
+	car = load(scene)
 	
 func _on_connected_to_server() -> void:
 	print("Connected to server!")

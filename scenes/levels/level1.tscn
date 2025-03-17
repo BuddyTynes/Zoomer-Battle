@@ -1,5 +1,6 @@
-[gd_scene load_steps=12 format=3 uid="uid://tj5dbddvjns6"]
+[gd_scene load_steps=13 format=3 uid="uid://tj5dbddvjns6"]
 
+[ext_resource type="Script" path="res://scripts/level.gd" id="1_esojj"]
 [ext_resource type="PackedScene" uid="uid://c3ixqkc6k13yi" path="res://addons/gevp/scenes/vehicle_controller.tscn" id="1_f0x7w"]
 [ext_resource type="PackedScene" uid="uid://bx8fhhfwam6q0" path="res://addons/gevp/scenes/monster_truck.tscn" id="2_pvgqn"]
 [ext_resource type="Script" path="res://addons/gevp/scripts/gui.gd" id="5_5qpvm"]
@@ -13,6 +14,7 @@
 [ext_resource type="PackedScene" uid="uid://cydjcmnmkscxl" path="res://scenes/player/modules/in-game-items/gun_mod_item.tscn" id="14_rcwbv"]
 
 [node name="ArcadeDemo" type="Node3D"]
+script = ExtResource("1_esojj")
 
 [node name="VehicleController" parent="." node_paths=PackedStringArray("vehicle_node") instance=ExtResource("1_f0x7w")]
 transform = Transform3D(-0.994015, 0, 0.109248, 0, 1, 0, -0.109248, 0, -0.994015, 0, 1.09154, 0)
