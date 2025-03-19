@@ -18,9 +18,28 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-
+	
+	var upnp = UPNP.new()
+	var discover_result = upnp.discover()
+	
+	if discover_result == UPNP.UPNP_RESULT_SUCCESS:
+		if upnp.get_gateway() and upnp.get_gateway().is_valid_gateway():
+			var map_result_udp = upnp.add_port_mapping(9999,9999,"godot_udp", "UDP")
+			var map_result_tcp = upnp.add_port_mapping(9999,9999,"godot_tcp", "TCP")
+			
+			if not map_result_udp == UPNP.UPNP_RESULT_SUCCESS:
+				upnp.add_port_mapping(9999,9999,"","UDP")
+			if not map_result_tcp == UPNP.UPNP_RESULT_SUCCESS:
+				upnp.add_port_mapping(9999,9999,"","TCP")
+				
+	var external_ip = upnp.query_external_address()
+	
+	#closes ports
+	#upnp.delete_port_mapping(9999, "UDP")
+	#upnp.delete_port_mapping(9999, "TCP")
+				
 func _on_host_pressed() -> void:
-	port = int(port.text) if port.text != "" else 42069
+	port = int(port.text) if port.text != "" else 9999
 	var error = peer.create_server(port, 9)
 	if !error:
 		start.hide()
@@ -44,7 +63,7 @@ func _on_host_pressed() -> void:
 		print("Failed to create server: ", error)
 		
 func _on_join_pressed() -> void:
-	port = int(port.text) if port.text != "" else 42069
+	port = int(port.text) if port.text != "" else 9999
 	ip = ip.text if ip.text != "" else "localhost"
 	var error = peer.create_client(ip, port)
 	if !error:

@@ -7,6 +7,8 @@ extends TabContainer
 	"res://addons/gevp/scenes/simcade_car.tscn",
 	"res://addons/gevp/scenes/arcade_car.tscn"
 ]
+func _ready():
+	_on_tab_selected(0)
 
 # Callback when a tab is selected
 func _on_tab_selected(tab: int) -> void:
