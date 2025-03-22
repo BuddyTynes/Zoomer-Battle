@@ -24,10 +24,10 @@ func _ready() -> void:
 	timer.one_shot = true  # Stops after one cycle
 	add_child(timer)  # Add the timer to the scene tree
 	timer.start()  # Start the timer
-	timer.connect("timeout", Callable(self, "_add_mod_on_clients"))
+	timer.connect("timeout", Callable(self, "_update_pid"))
 	
 func _process(delta: float) -> void:
-	if Input.is_action_pressed("fire_guns") and main and str(multiplayer.get_unique_id()) == vehicle.name:
+	if !multiplayer.is_server() and main and Input.is_action_pressed("fire_guns") and str(multiplayer.get_unique_id()) == vehicle.name:
 		time_since_last_shot += delta
 		if time_since_last_shot >= SHOOT_INTERVAL:
 			time_since_last_shot = 0.0
@@ -45,7 +45,5 @@ func shoot_guns() -> void:
 	bullet.set_pid(pid) # check which PID bullet is fired from
 	main.get_child(1).add_child(bullet)
 	
-func _add_mod_on_clients():
+func _update_pid():
 	pid = vehicle.name #re-assign here after 2 seconds so spawning mods can have correct PID
-	main.add_mod("gun_mod")
-	

@@ -18,28 +18,9 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	
-	var upnp = UPNP.new()
-	var discover_result = upnp.discover()
-	
-	if discover_result == UPNP.UPNP_RESULT_SUCCESS:
-		if upnp.get_gateway() and upnp.get_gateway().is_valid_gateway():
-			var map_result_udp = upnp.add_port_mapping(9999,9999,"godot_udp", "UDP")
-			var map_result_tcp = upnp.add_port_mapping(9999,9999,"godot_tcp", "TCP")
-			
-			if not map_result_udp == UPNP.UPNP_RESULT_SUCCESS:
-				upnp.add_port_mapping(9999,9999,"","UDP")
-			if not map_result_tcp == UPNP.UPNP_RESULT_SUCCESS:
-				upnp.add_port_mapping(9999,9999,"","TCP")
-				
-	var external_ip = upnp.query_external_address()
-	
-	#closes ports
-	#upnp.delete_port_mapping(9999, "UDP")
-	#upnp.delete_port_mapping(9999, "TCP")
 				
 func _on_host_pressed() -> void:
-	port = int(port.text) if port.text != "" else 9999
+	port = int(port.text) if port.text != "" else 42069
 	var error = peer.create_server(port, 9)
 	if !error:
 		start.hide()
@@ -63,7 +44,7 @@ func _on_host_pressed() -> void:
 		print("Failed to create server: ", error)
 		
 func _on_join_pressed() -> void:
-	port = int(port.text) if port.text != "" else 9999
+	port = int(port.text) if port.text != "" else 42069
 	ip = ip.text if ip.text != "" else "localhost"
 	var error = peer.create_client(ip, port)
 	if !error:
@@ -90,7 +71,9 @@ func set_peer_data(pid: int, car_scene) -> void:
 	if multiplayer.is_server():
 		for existing_pid in multiplayer.get_peers():
 			if existing_pid != pid:
+				# Send mods if we have any
 				rpc_id(existing_pid, "spawn_player", pid, car_scene)
+				# need to spawn others, with their mods
 				var existing = game_state.get_player(str(existing_pid)) # get the correct scene for existing player.
 				rpc_id(pid, "spawn_player", existing_pid, existing.scene)
 				
@@ -126,6 +109,7 @@ func add_player(pid: int, car_scene) -> void:
 				print("Player with ID " + str(pid) + " already exists.")
 				return
 	if multiplayer.is_server():
+		# need mods here
 		game_state.add_player(str(pid), 500, 100, car_scene)
 	# add the car
 	car = load(car_scene) # almost done, use game state isntead!

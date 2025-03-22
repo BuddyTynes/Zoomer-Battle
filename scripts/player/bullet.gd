@@ -26,4 +26,5 @@ func _on_area_3d_body_entered(body: Node3D) -> void:
 			$trail.process_material.radial_velocity_max = 60
 			$MeshInstance3D.hide()
 			await get_tree().create_timer(.1).timeout
-			queue_free()
+			
+		queue_free()
