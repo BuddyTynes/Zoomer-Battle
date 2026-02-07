@@ -5,6 +5,10 @@ extends Node3D
 @onready var port_input: LineEdit = get_node_or_null("UI/Start/VBoxContainer/Port")
 @onready var ip_input: LineEdit = get_node_or_null("UI/Start/VBoxContainer/IP")
 @onready var lobby: Control = get_node_or_null("UI/Lobby")
+@onready var end_game: Control = get_node_or_null("UI/EndGame")
+@onready var end_game_winner: Label = get_node_or_null("UI/EndGame/Panel/VBox/Winner")
+@onready var end_game_scores: ItemList = get_node_or_null("UI/EndGame/Panel/VBox/Scores")
+@onready var end_game_continue: Button = get_node_or_null("UI/EndGame/Panel/VBox/Continue")
 @onready var rooms_list_widget: ItemList = get_node_or_null("UI/Lobby/Root/RoomsPanel/RoomsVBox/RoomsList")
 @onready var refresh_rooms_button: Button = get_node_or_null("UI/Lobby/Root/RoomsPanel/RoomsVBox/RoomsButtons/RefreshRooms")
 @onready var join_room_button: Button = get_node_or_null("UI/Lobby/Root/RoomsPanel/RoomsVBox/RoomsButtons/JoinRoom")
@@ -33,6 +37,10 @@ const RESPAWN_CLEARANCE := 3.0
 const RESPAWN_RAY_HEIGHT := 10.0
 const RESPAWN_RAY_DEPTH := 50.0
 const RESPAWN_FREEZE_TIME := 0.35
+const RESPAWN_UNFREEZE_DELAY := 0.08
+const RESPAWN_BONUS_CLEARANCE := 2.0
+const RESPAWN_GUARD_MS := 600
+const MAX_VERTICAL_SPEED := 50.0
 const DEFAULT_PORT := 42069
 const DEFAULT_MAX_PLAYERS := 9
 const DEFAULT_HOST := "178.128.75.89"
@@ -66,6 +74,8 @@ func _ready() -> void:
 		leave_room_button.pressed.connect(_on_leave_room_pressed)
 	if start_match_button:
 		start_match_button.pressed.connect(_on_start_match_pressed)
+	if end_game_continue:
+		end_game_continue.pressed.connect(_on_end_game_continue_pressed)
 	if car_scene == null or car_scene == "":
 		car_scene = car.resource_path
 	_parse_cmdline()
@@ -165,8 +175,14 @@ func _get_next_spawn_position() -> Vector3:
 	_next_spawn_index += 1
 	return n.global_transform.origin
 
+
 func _adjust_spawn_position(spawn_pos: Vector3, exclude: Array = [], clearance: float = RESPAWN_CLEARANCE) -> Vector3:
-	var space_state = get_world_3d().direct_space_state
+	if not _vec_ok(spawn_pos):
+		return Vector3(0, 2, 0)
+	var world = get_world_3d()
+	if world == null:
+		return spawn_pos + Vector3.UP * clearance
+	var space_state = world.direct_space_state
 	var from = spawn_pos + Vector3.UP * RESPAWN_RAY_HEIGHT
 	var to = spawn_pos - Vector3.UP * RESPAWN_RAY_DEPTH
 	var query := PhysicsRayQueryParameters3D.create(from, to)
@@ -174,14 +190,16 @@ func _adjust_spawn_position(spawn_pos: Vector3, exclude: Array = [], clearance: 
 	query.collide_with_areas = false
 	var hit = space_state.intersect_ray(query)
 	if hit and hit.has("position"):
-		return hit["position"] + Vector3.UP * clearance
-	return spawn_pos + Vector3.UP * clearance
+		var pos = hit["position"] + Vector3.UP * clearance
+		return pos if _vec_ok(pos) else spawn_pos + Vector3.UP * clearance
+	var fallback = spawn_pos + Vector3.UP * clearance
+	return fallback if _vec_ok(fallback) else Vector3(0, 2, 0)
 
 func _get_car_clearance(car_node: Node) -> float:
 	var clearance := RESPAWN_CLEARANCE
 	if car_node:
 		var shapes = car_node.find_children("", "CollisionShape3D", true, false)
-		var min_y := INF
+		var max_extent := 0.0
 		for s in shapes:
 			if s is CollisionShape3D and s.shape:
 				var shape = s.shape
@@ -194,10 +212,9 @@ func _get_car_clearance(car_node: Node) -> float:
 					extent = shape.radius
 				elif shape is CylinderShape3D:
 					extent = shape.height * 0.5 + shape.radius
-				var local_pos = car_node.to_local(s.global_transform.origin)
-				min_y = min(min_y, local_pos.y - extent)
-		if min_y != INF:
-			clearance = max(clearance, -min_y + 0.5)
+				max_extent = max(max_extent, extent)
+		if max_extent > 0.0:
+			clearance = max(clearance, max_extent + 0.75)
 	return clearance
 
 
@@ -257,10 +274,11 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 			if level_instance.has_node("Camera3D"):
 				var cam = level_instance.get_node("Camera3D")
 				cam.follow_this = car_instance
+		_apply_respawn_guard(car_instance)
 			
 	var clearance = _get_car_clearance(car_instance)
 	var spawn = _adjust_spawn_position(_get_next_spawn_position(), [car_instance], clearance)
-	car_instance.global_transform.origin = spawn
+	car_instance.global_transform = Transform3D(Basis.IDENTITY, spawn)
 	car_instance.linear_velocity = Vector3.ZERO
 	car_instance.angular_velocity = Vector3.ZERO
 	_defer_respawn_enable(car_instance)
@@ -301,6 +319,23 @@ func _physics_process(_delta: float) -> void:
 		if !multiplayer.is_server():
 			if not is_instance_valid(vehicle_rigid_body):
 				return
+			# Apply respawn guard to prevent launch/NaNs
+			if vehicle_rigid_body.has_meta("_respawn_guard_until"):
+				var until = int(vehicle_rigid_body.get_meta("_respawn_guard_until"))
+				if Time.get_ticks_msec() < until:
+					vehicle_rigid_body.linear_velocity = Vector3.ZERO
+					vehicle_rigid_body.angular_velocity = Vector3.ZERO
+					return
+				else:
+					vehicle_rigid_body.set_meta("_respawn_guard_until", null)
+					if vehicle_rigid_body.has_meta("_orig_gravity_scale"):
+						vehicle_rigid_body.gravity_scale = float(vehicle_rigid_body.get_meta("_orig_gravity_scale"))
+						vehicle_rigid_body.set_meta("_orig_gravity_scale", null)
+			# Clamp extreme vertical velocity
+			if absf(vehicle_rigid_body.linear_velocity.y) > MAX_VERTICAL_SPEED:
+				var lv = vehicle_rigid_body.linear_velocity
+				lv.y = clampf(lv.y, -MAX_VERTICAL_SPEED, MAX_VERTICAL_SPEED)
+				vehicle_rigid_body.linear_velocity = lv
 			# Do not send transforms while our local car is KO'd or missing
 			if vehicle_rigid_body and not (vehicle_rigid_body.has_meta("dead") and vehicle_rigid_body.get_meta("dead") == true) and _is_transform_valid(vehicle_rigid_body.global_transform):
 				rpc("update_player_transform", multiplayer.get_unique_id(), vehicle_rigid_body.global_transform.orthonormalized())
@@ -479,15 +514,14 @@ func respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> 
 		car_node.freeze = true
 		if car_node.has_method("set_sleeping"):
 			car_node.set_sleeping(true)
-		var clearance = _get_car_clearance(car_node)
+		var clearance = _get_car_clearance(car_node) + RESPAWN_BONUS_CLEARANCE
 		var safe_spawn = _adjust_spawn_position(spawn_pos, [car_node], clearance)
-		var t = car_node.global_transform
-		t.origin = safe_spawn
-		car_node.global_transform = t
+		car_node.global_transform = Transform3D(Basis.IDENTITY, safe_spawn)
 		# Clear KO state and motion
 		car_node.set_meta("dead", false)
 		car_node.linear_velocity = Vector3.ZERO
 		car_node.angular_velocity = Vector3.ZERO
+		_apply_respawn_guard(car_node)
 		car_node.show()
 		_defer_respawn_enable(car_node)
 		# If this is my local player, retarget controller, GUI and camera
@@ -658,10 +692,18 @@ func _on_peer_disconnected(peer_id: int) -> void:
 func _show_lobby(visible: bool) -> void:
 	if lobby:
 		lobby.visible = visible
+	if end_game and visible:
+		end_game.visible = false
 	if visible:
 		_set_lobby_status("Connected")
 	else:
 		_set_lobby_status("")
+
+func _show_end_game(visible: bool) -> void:
+	if end_game:
+		end_game.visible = visible
+	if visible:
+		_show_lobby(false)
 
 func _set_lobby_status(text: String) -> void:
 	if lobby_status_label:
@@ -805,6 +847,14 @@ func _end_match(room_id: String, winner_id: String) -> void:
 	var room = rooms[room_id]
 	room["status"] = "lobby"
 	rooms[room_id] = room
+	var scores := []
+	for pid in room["players"]:
+		var score = game_state.get_score(pid)
+		scores.append({
+			"id": pid,
+			"kills": int(score["kills"]),
+			"deaths": int(score["deaths"])
+		})
 	for pid in room["players"]:
 		_despawn_player(pid)
 		if game_state.players.has(pid):
@@ -813,7 +863,7 @@ func _end_match(room_id: String, winner_id: String) -> void:
 		for member_id in room["players"]:
 			rpc_id(int(member_id), "despawn_player", pid)
 	for member_id in room["players"]:
-		rpc_id(int(member_id), "match_ended", room_id, winner_id)
+		rpc_id(int(member_id), "match_ended", room_id, winner_id, scores)
 		rpc_id(int(member_id), "room_updated", room)
 	_broadcast_rooms_list()
 
@@ -986,12 +1036,29 @@ func match_started(room_id: String, _kill_limit: int) -> void:
 	_ensure_level_loaded()
 
 @rpc("any_peer", "reliable")
-func match_ended(room_id: String, winner_id: String) -> void:
+func match_ended(room_id: String, winner_id: String, scores: Array) -> void:
 	if current_room_id != room_id:
 		return
 	in_match = false
-	_show_lobby(true)
+	_show_end_game(true)
+	if end_game_winner:
+		end_game_winner.text = "Winner: %s" % winner_id
+	if end_game_scores:
+		end_game_scores.clear()
+		var sorted_scores = scores.duplicate()
+		sorted_scores.sort_custom(func(a, b):
+			return int(a.get("kills", 0)) > int(b.get("kills", 0))
+		)
+		for s in sorted_scores:
+			var line = "%s  K:%s  D:%s" % [str(s.get("id", "")), str(s.get("kills", 0)), str(s.get("deaths", 0))]
+			end_game_scores.add_item(line)
 	_set_lobby_status("Match ended. Winner: %s" % winner_id)
+
+func _on_end_game_continue_pressed() -> void:
+	_show_end_game(false)
+	_show_lobby(true)
+	if multiplayer.multiplayer_peer:
+		rpc_id(1, "list_rooms")
 
 @rpc("any_peer", "reliable")
 func despawn_player(pid: String) -> void:
@@ -1026,11 +1093,19 @@ func _defer_respawn_enable(car_node: Node) -> void:
 	await get_tree().create_timer(RESPAWN_FREEZE_TIME).timeout
 	if is_instance_valid(car_node):
 		_restore_collisions(car_node)
-		car_node.freeze = false
-		car_node.linear_velocity = Vector3.ZERO
-		car_node.angular_velocity = Vector3.ZERO
-		if car_node.has_method("set_sleeping"):
-			car_node.set_sleeping(false)
+		await get_tree().create_timer(RESPAWN_UNFREEZE_DELAY).timeout
+		if is_instance_valid(car_node):
+			car_node.freeze = false
+			car_node.linear_velocity = Vector3.ZERO
+			car_node.angular_velocity = Vector3.ZERO
+			if car_node.has_method("set_sleeping"):
+				car_node.set_sleeping(false)
+
+func _apply_respawn_guard(car_node: Node) -> void:
+	if car_node and car_node.has_method("get"):
+		car_node.set_meta("_orig_gravity_scale", car_node.gravity_scale)
+		car_node.gravity_scale = 0.0
+		car_node.set_meta("_respawn_guard_until", Time.get_ticks_msec() + RESPAWN_GUARD_MS)
 
 func _start_server(server_port: int, max_players: int) -> bool:
 	var error = peer.create_server(server_port, max_players)
