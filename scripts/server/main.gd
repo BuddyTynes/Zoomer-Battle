@@ -13,6 +13,8 @@ var vehicle_rigid_body : Vehicle
 var car_controller : VehicleController # assigned in add_level()
 var car_scene
 const RESPAWN_TIME := 3
+const MAX_HEALTH := 100
+const HIT_DAMAGE := 30
 const DEFAULT_PORT := 42069
 const DEFAULT_MAX_PLAYERS := 9
 const DEFAULT_HOST := "178.128.75.89"
@@ -160,7 +162,7 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 				return
 	if multiplayer.is_server():
 		# Adding our players initial data.
-		game_state.add_player(str(pid), 500, 100, car_scene_path)
+		game_state.add_player(str(pid), MAX_HEALTH, 100, car_scene_path)
 		# Persist any provided mods
 		if typeof(mods) == TYPE_ARRAY:
 			for m in mods:
@@ -172,6 +174,9 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 	var car_instance = car_res.instantiate()
 	car_instance.set_multiplayer_authority(pid)
 	car_instance.name = str(pid)
+	# Cache default collision layers for respawn restores
+	car_instance.set_meta("_orig_layer", car_instance.collision_layer)
+	car_instance.set_meta("_orig_mask", car_instance.collision_mask)
 	car_controller.add_child(car_instance)
 	if typeof(mods) == TYPE_ARRAY and not mods.is_empty():
 		for mod in mods: # load mods and add child to this player's car
@@ -304,8 +309,10 @@ func start_respawn(player_name: String, _seconds: int) -> void:
 	if car_controller and car_controller.has_node(player_name):
 		var car_node: Node = car_controller.get_node(player_name)
 		# Save current collision masks so we can restore later
-		car_node.set_meta("_orig_layer", car_node.collision_layer)
-		car_node.set_meta("_orig_mask", car_node.collision_mask)
+		if not car_node.has_meta("_orig_layer"):
+			car_node.set_meta("_orig_layer", car_node.collision_layer)
+		if not car_node.has_meta("_orig_mask"):
+			car_node.set_meta("_orig_mask", car_node.collision_mask)
 		car_node.collision_layer = 0
 		car_node.collision_mask = 0
 		car_node.linear_velocity = Vector3.ZERO
@@ -350,7 +357,7 @@ func finish_respawn(player_name: String, spawn_pos: Vector3) -> void:
 	if multiplayer.is_server():
 		var st = game_state.get_player(player_name)
 		if typeof(st) == TYPE_DICTIONARY:
-			game_state.update_player(player_name, 100, st["defense"])
+			game_state.update_player(player_name, MAX_HEALTH, st["defense"])
 			if game_state.players.has(player_name) and game_state.players[player_name].has("mods"):
 				game_state.players[player_name]["mods"].clear()
 
@@ -380,13 +387,18 @@ func respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> 
 		if scene:
 			car_node = scene.instantiate()
 			car_node.name = pid
+			# Cache default collision layers for respawn restores
+			car_node.set_meta("_orig_layer", car_node.collision_layer)
+			car_node.set_meta("_orig_mask", car_node.collision_mask)
 			car_controller.add_child(car_node)
 	if car_node:
 		var pid_int = int(pid)
 		if car_node.has_method("set_multiplayer_authority"):
 			car_node.set_multiplayer_authority(pid_int)
+		# Temporarily freeze while repositioning
+		car_node.freeze = true
 		var t = car_node.global_transform
-		t.origin = spawn_pos
+		t.origin = spawn_pos + Vector3(0, 1.0, 0)
 		car_node.global_transform = t
 		# Restore collisions
 		if car_node.has_meta("_orig_layer"):
@@ -399,10 +411,10 @@ func respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> 
 			car_node.collision_mask = 1
 		# Clear KO state and motion
 		car_node.set_meta("dead", false)
-		car_node.freeze = false
 		car_node.linear_velocity = Vector3.ZERO
 		car_node.angular_velocity = Vector3.ZERO
 		car_node.show()
+		car_node.freeze = false
 		if car_node.has_method("set_sleeping"):
 			car_node.set_sleeping(false)
 		# If this is my local player, retarget controller, GUI and camera
@@ -453,11 +465,16 @@ func sync_thrusters(pid, emit):
 
 func hit_body(hit_body_name, pid):
 	var player = game_state.get_player(hit_body_name)
-	player.health = player.health - 30
+	if typeof(player) != TYPE_DICTIONARY or not player.has("health"):
+		return
+	player.health = int(player.health) - HIT_DAMAGE
 	# Update the victim, not the shooter
-	game_state.update_player(hit_body_name, player.health, player.defense)
-	if player.health <= 0:
-		rpc("player_dead", pid, hit_body_name)
+	game_state.update_player(hit_body_name, int(player.health), int(player.defense))
+	if int(player.health) <= 0:
+		# Run on server immediately, then notify clients only
+		player_dead(pid, hit_body_name)
+		for peer_id in multiplayer.get_peers():
+			rpc_id(peer_id, "player_dead", pid, hit_body_name)
 @rpc("any_peer", "reliable")
 func player_dead(_pid, hit_body_name):
 	var player = car_controller.get_node_or_null(str(hit_body_name))
@@ -491,7 +508,8 @@ func player_dead(_pid, hit_body_name):
 			# Notify everyone to enter respawn state and show countdown for owner
 			rpc("start_respawn", hit_body_name, RESPAWN_TIME)
 			# Tell the owning peer to show their countdown UI
-			rpc_id(int(hit_body_name), "show_respawn", RESPAWN_TIME)
+			var owner_id := int(str(hit_body_name))
+			rpc_id(owner_id, "show_respawn", RESPAWN_TIME)
 			# Also apply on the server
 			start_respawn(hit_body_name, RESPAWN_TIME)
 			await get_tree().create_timer(RESPAWN_TIME).timeout
@@ -499,7 +517,7 @@ func player_dead(_pid, hit_body_name):
 			var st = game_state.get_player(hit_body_name)
 			var scene_path = st["scene"] if typeof(st) == TYPE_DICTIONARY and st.has("scene") else car.resource_path
 			# Ask the owner to hide UI; send fresh car to all peers
-			rpc_id(int(hit_body_name), "hide_respawn_ui")
+			rpc_id(owner_id, "hide_respawn_ui")
 			rpc("respawn_player", hit_body_name, scene_path, spawn)
 			respawn_player(hit_body_name, scene_path, spawn)
 	
