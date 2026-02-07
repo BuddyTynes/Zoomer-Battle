@@ -15,6 +15,12 @@ func _ready():
 	main = get_tree().root.get_child(0)
 	
 func _process(delta: float) -> void:
+	# Don't operate while dead
+	if vehicle.has_meta("dead") and vehicle.get_meta("dead") == true:
+		return
+	# Avoid networking calls until a peer is assigned and connected
+	if not multiplayer.multiplayer_peer:
+		return
 	if Input.is_action_pressed("activate_jet") and str(multiplayer.get_unique_id()) == vehicle.name:
 		emit_thrusters()
 		main.emit_thrusters(true)

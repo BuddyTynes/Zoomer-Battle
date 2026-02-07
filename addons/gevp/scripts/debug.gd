@@ -12,6 +12,8 @@ func _process(delta):
 	if Input.is_action_just_pressed("ShowDebug"):
 		show_debug = !show_debug
 		debug_ui.clear_debug()
+	if not is_instance_valid(vehicle):
+		return
 	
 	if Input.is_action_just_pressed("DebugNext"):
 		switch_debug_set(current_debug_set + 1)

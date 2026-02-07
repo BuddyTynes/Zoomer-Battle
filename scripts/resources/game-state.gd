@@ -10,7 +10,8 @@ func add_player(player_id: String, health: int, defense: int, car_scene: String)
 		players[player_id] = {
 			"health": health,
 			"defense": defense,
-			"scene": car_scene
+			"scene": car_scene,
+			"mods": []
 		}
 	else:
 		print("Player", player_id, "already exists!")
@@ -20,6 +21,14 @@ func update_player(player_id: String, health: int, defense: int) -> void:
 	if players.has(player_id):
 		players[player_id]["health"] = health
 		players[player_id]["defense"] = defense
+	else:
+		print("Player", player_id, "not found!")
+		
+
+# Add a mod to a player
+func add_mod(player_id: String, mod) -> void:
+	if players.has(player_id):
+		players[player_id]["mods"].append(mod)
 	else:
 		print("Player", player_id, "not found!")
 

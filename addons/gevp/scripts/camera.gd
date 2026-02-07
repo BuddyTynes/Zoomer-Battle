@@ -12,12 +12,16 @@ var last_mouse_position = Vector2()
 var target_position: Vector3
 
 func _physics_process(delta : float):
+	if follow_this == null or not is_instance_valid(follow_this):
+		return
 	follow_target()
 	
 	if Input.is_action_pressed("ui_right_click"):
 		update_camera_rotation()
 		
-	look_at(follow_this.global_transform.origin, Vector3.UP)
+	var target = follow_this.global_transform.origin
+	if global_transform.origin.distance_to(target) > 0.001:
+		look_at(target, Vector3.UP)
 
 func follow_target():
 	var delta_v := global_transform.origin - follow_this.global_transform.origin

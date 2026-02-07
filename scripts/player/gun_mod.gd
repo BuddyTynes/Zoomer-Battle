@@ -27,6 +27,12 @@ func _ready() -> void:
 	timer.connect("timeout", Callable(self, "_update_pid"))
 	
 func _process(delta: float) -> void:
+	# Don't operate while dead
+	if vehicle.has_meta("dead") and vehicle.get_meta("dead") == true:
+		return
+	# Guard: multiplayer may not be ready in menus or before connect
+	if not multiplayer.multiplayer_peer:
+		return
 	if !multiplayer.is_server() and main and Input.is_action_pressed("fire_guns") and str(multiplayer.get_unique_id()) == vehicle.name:
 		time_since_last_shot += delta
 		if time_since_last_shot >= SHOOT_INTERVAL:
