@@ -4,6 +4,20 @@ extends Node3D
 @onready var game_state = preload("res://scripts/resources/game-state.tres")
 @onready var port_input: LineEdit = get_node_or_null("UI/Start/VBoxContainer/Port")
 @onready var ip_input: LineEdit = get_node_or_null("UI/Start/VBoxContainer/IP")
+@onready var lobby: Control = get_node_or_null("UI/Lobby")
+@onready var rooms_list_widget: ItemList = get_node_or_null("UI/Lobby/Root/RoomsPanel/RoomsVBox/RoomsList")
+@onready var refresh_rooms_button: Button = get_node_or_null("UI/Lobby/Root/RoomsPanel/RoomsVBox/RoomsButtons/RefreshRooms")
+@onready var join_room_button: Button = get_node_or_null("UI/Lobby/Root/RoomsPanel/RoomsVBox/RoomsButtons/JoinRoom")
+@onready var room_name_input: LineEdit = get_node_or_null("UI/Lobby/Root/CreatePanel/CreateVBox/RoomName")
+@onready var max_players_input: SpinBox = get_node_or_null("UI/Lobby/Root/CreatePanel/CreateVBox/MaxPlayers")
+@onready var kill_limit_input: SpinBox = get_node_or_null("UI/Lobby/Root/CreatePanel/CreateVBox/KillLimit")
+@onready var create_room_button: Button = get_node_or_null("UI/Lobby/Root/CreatePanel/CreateVBox/CreateRoom")
+@onready var room_title_label: Label = get_node_or_null("UI/Lobby/Root/RoomPanel/RoomVBox/RoomTitle")
+@onready var room_info_label: Label = get_node_or_null("UI/Lobby/Root/RoomPanel/RoomVBox/RoomInfo")
+@onready var room_players_list: ItemList = get_node_or_null("UI/Lobby/Root/RoomPanel/RoomVBox/PlayersList")
+@onready var start_match_button: Button = get_node_or_null("UI/Lobby/Root/RoomPanel/RoomVBox/RoomButtons/StartMatch")
+@onready var leave_room_button: Button = get_node_or_null("UI/Lobby/Root/RoomPanel/RoomVBox/RoomButtons/LeaveRoom")
+@onready var lobby_status_label: Label = get_node_or_null("UI/Lobby/Status")
 
 var peer = ENetMultiplayerPeer.new()
 var level = preload("res://scenes/levels/level1.tscn")
@@ -15,12 +29,19 @@ var car_scene
 const RESPAWN_TIME := 3
 const MAX_HEALTH := 100
 const HIT_DAMAGE := 30
-const RESPAWN_CLEARANCE := 1.5
+const RESPAWN_CLEARANCE := 3.0
 const RESPAWN_RAY_HEIGHT := 10.0
 const RESPAWN_RAY_DEPTH := 50.0
 const DEFAULT_PORT := 42069
 const DEFAULT_MAX_PLAYERS := 9
 const DEFAULT_HOST := "178.128.75.89"
+
+var rooms := {}
+var player_room := {}
+var _next_room_id := 1
+var current_room_id: String = ""
+var current_room: Dictionary = {}
+var in_match := false
 
 var _cmd_dedicated := false
 var _cmd_port := DEFAULT_PORT
@@ -32,6 +53,18 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	if multiplayer.peer_disconnected.is_connected(_on_peer_disconnected) == false:
+		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	if refresh_rooms_button:
+		refresh_rooms_button.pressed.connect(_on_refresh_rooms_pressed)
+	if join_room_button:
+		join_room_button.pressed.connect(_on_join_room_pressed)
+	if create_room_button:
+		create_room_button.pressed.connect(_on_create_room_pressed)
+	if leave_room_button:
+		leave_room_button.pressed.connect(_on_leave_room_pressed)
+	if start_match_button:
+		start_match_button.pressed.connect(_on_start_match_pressed)
 	if car_scene == null or car_scene == "":
 		car_scene = car.resource_path
 	_parse_cmdline()
@@ -46,6 +79,7 @@ func _on_host_pressed() -> void:
 		ui_port = int(port_input.text)
 	if _start_server(ui_port, DEFAULT_MAX_PLAYERS):
 		_cleanup_host_view()
+		_show_lobby(true)
 		
 func _on_join_pressed() -> void:
 	var ui_port := DEFAULT_PORT
@@ -78,32 +112,9 @@ func _on_peer_connected(_pid: int) -> void:
 	pass
 @rpc("any_peer")
 func set_peer_data(pid: int, car_scene_path) -> void:
-	# Tell new peer about existing players
 	print("Peer Connectred ... ID: " + str(pid))
 	if multiplayer.is_server():
-		var player_state = game_state.get_player(str(pid))
-		var joiner_mods: Array = []
-		if typeof(player_state) == TYPE_DICTIONARY and player_state.has("mods"):
-			joiner_mods = player_state["mods"]
-		# Ensure the joining peer spawns themselves
-		rpc_id(pid, "spawn_player", pid, car_scene_path, joiner_mods)
-		for existing_pid in multiplayer.get_peers():
-			var other_player = game_state.get_player(str(existing_pid))
-			if existing_pid != pid:
-				# Tell existing peers to spawn the joiner
-				rpc_id(existing_pid, "spawn_player", pid, car_scene_path, joiner_mods)
-				print("player mods")
-				print(joiner_mods)
-				print("Other Player")
-				var other_mods = other_player["mods"] if typeof(other_player) == TYPE_DICTIONARY and other_player.has("mods") else []
-				print(other_mods)
-				# need to spawn others, with their mods
-				var existing = game_state.get_player(str(existing_pid)) # get the correct scene for existing player.
-				if typeof(existing) == TYPE_DICTIONARY and existing.has("scene"):
-					rpc_id(pid, "spawn_player", existing_pid, existing["scene"], other_mods)
-		# Add on server scene and record state
-		add_player(pid, car_scene_path, joiner_mods)
-		# Send score syncs to the joiner
+		_ensure_player_state(pid, car_scene_path, [])
 		_send_scores_to(pid)
 		
 #  SSS   EEEE  RRRR   V   V  EEEE  RRRR
@@ -120,16 +131,10 @@ func add_level() -> void:
 		start.get_child(1).queue_free()
 	# We need our level before we can grab our car controller
 	car_controller = level_instance.get_node_or_null("VehicleController")
-	if multiplayer.is_server():
-		level_instance.replace_player_car(car)
-		vehicle_rigid_body = level_instance.get_node_or_null("VehicleController/VehicleRigidBody")
-		if vehicle_rigid_body:
-			vehicle_rigid_body.name = str(multiplayer.get_unique_id())
-	else:
-		# Remove placeholder car on clients
-		var placeholder = level_instance.get_node_or_null("VehicleController/VehicleRigidBody")
-		if placeholder:
-			placeholder.queue_free()
+	# Remove placeholder car
+	var placeholder = level_instance.get_node_or_null("VehicleController/VehicleRigidBody")
+	if placeholder:
+		placeholder.queue_free()
 	if not multiplayer.is_server() and level_instance.has_node("Camera3D"):
 		level_instance.get_node("Camera3D").current = true
 	_cache_spawn_points()
@@ -168,6 +173,10 @@ func _adjust_spawn_position(spawn_pos: Vector3, exclude: Array = []) -> Vector3:
 
 @rpc("any_peer", "reliable")
 func spawn_player(pid: int, car_scene_path, mods) -> void:
+	if level_instance == null:
+		add_level()
+	if car_controller == null and level_instance:
+		car_controller = level_instance.get_node_or_null("VehicleController")
 	add_player(pid, car_scene_path, mods)
 # must always be called after add_level has been called once!
 func add_player(pid: int, car_scene_path, mods) -> void:
@@ -178,18 +187,11 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 				print("Player with ID " + str(pid) + " already exists.")
 				return
 	if multiplayer.is_server():
-		# Adding our players initial data.
-		game_state.add_player(str(pid), MAX_HEALTH, 100, car_scene_path)
+		_ensure_player_state(pid, car_scene_path, mods)
 		# Broadcast initial score for this player
 		var score = game_state.get_score(str(pid))
 		for peer_id in multiplayer.get_peers():
 			rpc_id(peer_id, "sync_score", str(pid), score["kills"], score["deaths"])
-		# Persist any provided mods
-		if typeof(mods) == TYPE_ARRAY:
-			for m in mods:
-				game_state.add_mod(str(pid), m)
-		elif typeof(mods) == TYPE_STRING and mods != "":
-			game_state.add_mod(str(pid), mods)
 	# add the car
 	var car_res = load(car_scene_path) # load resource without clobbering global 'car'
 	var car_instance = car_res.instantiate()
@@ -222,6 +224,20 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 			
 	car_instance.global_transform.origin = Vector3(0, 2, 0)
 	print("Player with ID " + str(pid) + " added to the game.")
+
+func _ensure_player_state(pid: int, car_scene_path, mods) -> void:
+	var pid_str := str(pid)
+	if not game_state.players.has(pid_str):
+		game_state.add_player(pid_str, MAX_HEALTH, 100, car_scene_path)
+	else:
+		game_state.players[pid_str]["scene"] = car_scene_path
+	if typeof(mods) == TYPE_ARRAY:
+		for m in mods:
+			if not game_state.players[pid_str]["mods"].has(m):
+				game_state.add_mod(pid_str, m)
+	elif typeof(mods) == TYPE_STRING and mods != "":
+		if not game_state.players[pid_str]["mods"].has(mods):
+			game_state.add_mod(pid_str, mods)
 
 # RPC function to spawn players across all clients
 
@@ -418,6 +434,8 @@ func respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> 
 			car_node.set_multiplayer_authority(pid_int)
 		# Temporarily freeze while repositioning
 		car_node.freeze = true
+		if car_node.has_method("set_sleeping"):
+			car_node.set_sleeping(true)
 		var safe_spawn = _adjust_spawn_position(spawn_pos, [car_node])
 		var t = car_node.global_transform
 		t.origin = safe_spawn
@@ -436,9 +454,7 @@ func respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> 
 		car_node.linear_velocity = Vector3.ZERO
 		car_node.angular_velocity = Vector3.ZERO
 		car_node.show()
-		car_node.freeze = false
-		if car_node.has_method("set_sleeping"):
-			car_node.set_sleeping(false)
+		_defer_unfreeze(car_node)
 		# If this is my local player, retarget controller, GUI and camera
 		if str(multiplayer.get_unique_id()) == pid and level_instance:
 			if level_instance.has_node("VehicleController"):
@@ -505,6 +521,14 @@ func hit_body(hit_body_name, pid):
 				var killer_score = game_state.get_score(str(pid))
 				for peer_id in multiplayer.get_peers():
 					rpc_id(peer_id, "sync_score", str(pid), killer_score["kills"], killer_score["deaths"])
+			var room_id = _get_room_id_for_player(hit_body_name)
+			var room = _get_room(room_id)
+			var kill_limit = int(room.get("kill_limit", 0))
+			if room_id != "" and room.get("status", "lobby") == "in_game" and pid != null and kill_limit > 0:
+				var ks = game_state.get_score(str(pid))
+				if int(ks["kills"]) >= kill_limit:
+					_end_match(room_id, str(pid))
+					return
 		# Run on server immediately, then notify clients only
 		player_dead(pid, hit_body_name)
 		for peer_id in multiplayer.get_peers():
@@ -539,6 +563,10 @@ func player_dead(_pid, hit_body_name):
 		# wait then re-spawn
 		# Server orchestrates start/finish for all peers
 		if multiplayer.is_server():
+			var room_id = _get_room_id_for_player(hit_body_name)
+			var room = _get_room(room_id)
+			if room_id == "" or room.get("status", "lobby") != "in_game":
+				return
 			# Notify everyone to enter respawn state and show countdown for owner
 			rpc("start_respawn", hit_body_name, RESPAWN_TIME)
 			# Tell the owning peer to show their countdown UI
@@ -563,25 +591,376 @@ func _on_connected_to_server() -> void:
 	print("Connected to server!")
 	if start:
 		start.hide()
-	# Safe point to create level and inform server
-	if level_instance == null:
-		add_level()
+	_show_lobby(true)
 	# Inform server about our selected car and receive state
 	if car_scene == null or car_scene == "":
 		car_scene = car.resource_path
 	rpc_id(1, "set_peer_data", multiplayer.get_unique_id(), car_scene)
+	rpc_id(1, "list_rooms")
 
 func _on_connection_failed() -> void:
 	print("Connection failed!")
 	multiplayer.multiplayer_peer = null
 	if start:
 		start.show()
+	_show_lobby(false)
 
 func _on_server_disconnected() -> void:
 	print("Server disconnected!")
 	multiplayer.multiplayer_peer = null
 	if start:
 		start.show()
+	_show_lobby(false)
+
+func _on_peer_disconnected(peer_id: int) -> void:
+	if multiplayer.is_server():
+		_remove_from_room(peer_id, true)
+		_despawn_player(str(peer_id))
+		player_room.erase(str(peer_id))
+		if game_state.players.has(str(peer_id)):
+			game_state.remove_player(str(peer_id))
+
+func _show_lobby(visible: bool) -> void:
+	if lobby:
+		lobby.visible = visible
+	if visible:
+		_set_lobby_status("Connected")
+	else:
+		_set_lobby_status("")
+
+func _set_lobby_status(text: String) -> void:
+	if lobby_status_label:
+		lobby_status_label.text = text
+
+func _ensure_level_loaded() -> void:
+	if level_instance == null:
+		add_level()
+
+func _despawn_player(pid: String) -> void:
+	if car_controller:
+		var car_node = car_controller.get_node_or_null(pid)
+		if car_node:
+			car_node.queue_free()
+	if str(multiplayer.get_unique_id()) == pid:
+		vehicle_rigid_body = null
+		if level_instance:
+			if level_instance.has_node("VehicleController"):
+				var vc = level_instance.get_node("VehicleController")
+				vc.vehicle_node = null
+			if level_instance.has_node("GUI"):
+				var gui_node = level_instance.get_node("GUI")
+				gui_node.vehicle = null
+			if level_instance.has_node("Camera3D"):
+				var cam = level_instance.get_node("Camera3D")
+				cam.follow_this = null
+
+func _get_room_id_for_player(pid: String) -> String:
+	if player_room.has(pid):
+		return str(player_room[pid])
+	return ""
+
+func _get_room(room_id: String) -> Dictionary:
+	if rooms.has(room_id):
+		return rooms[room_id]
+	return {}
+
+func _build_room_summary(room: Dictionary) -> Dictionary:
+	return {
+		"id": room.get("id", ""),
+		"name": room.get("name", "Room"),
+		"players": room.get("players", []).size(),
+		"max_players": room.get("max_players", 0),
+		"status": room.get("status", "lobby"),
+		"kill_limit": room.get("kill_limit", 0)
+	}
+
+func _broadcast_rooms_list() -> void:
+	if not multiplayer.is_server():
+		return
+	var list: Array = []
+	for room_id in rooms.keys():
+		var room = rooms[room_id]
+		if room.get("status", "lobby") == "lobby":
+			list.append(_build_room_summary(room))
+	for peer_id in multiplayer.get_peers():
+		rpc_id(peer_id, "rooms_list", list)
+
+func _update_room_ui(room_data: Dictionary) -> void:
+	if room_title_label:
+		room_title_label.text = room_data.get("name", "Room")
+	if room_info_label:
+		room_info_label.text = "Players: %s/%s  Kill Limit: %s  Status: %s" % [
+			str(room_data.get("players", []).size()),
+			str(room_data.get("max_players", 0)),
+			str(room_data.get("kill_limit", 0)),
+			str(room_data.get("status", "lobby"))
+		]
+	if room_players_list:
+		room_players_list.clear()
+		for p in room_data.get("players", []):
+			room_players_list.add_item(str(p))
+	if start_match_button:
+		var is_leader = str(room_data.get("leader", "")) == str(multiplayer.get_unique_id())
+		var in_lobby = str(room_data.get("status", "lobby")) == "lobby"
+		start_match_button.disabled = not (is_leader and in_lobby)
+
+func _remove_from_room(peer_id: int, notify_peer: bool) -> void:
+	var pid = str(peer_id)
+	if not player_room.has(pid):
+		return
+	var room_id = str(player_room[pid])
+	player_room.erase(pid)
+	if not rooms.has(room_id):
+		return
+	var room = rooms[room_id]
+	room["players"].erase(pid)
+	if room.get("status", "lobby") == "in_game":
+		_despawn_player(pid)
+		for member_id in room["players"]:
+			rpc_id(int(member_id), "despawn_player", pid)
+	if room["players"].is_empty():
+		rooms.erase(room_id)
+		_broadcast_rooms_list()
+		return
+	# Reassign leader if needed
+	if str(room.get("leader", "")) == pid:
+		room["leader"] = room["players"][0]
+	rooms[room_id] = room
+	_broadcast_rooms_list()
+	for member_id in room["players"]:
+		rpc_id(int(member_id), "room_updated", room)
+	if notify_peer:
+		rpc_id(int(pid), "room_left")
+
+func _start_match(room_id: String) -> void:
+	if not rooms.has(room_id):
+		return
+	var room = rooms[room_id]
+	if room.get("status", "lobby") != "lobby":
+		return
+	room["status"] = "in_game"
+	rooms[room_id] = room
+	for pid in room["players"]:
+		if game_state.players.has(pid):
+			game_state.players[pid]["kills"] = 0
+			game_state.players[pid]["deaths"] = 0
+			game_state.update_player(pid, MAX_HEALTH, int(game_state.players[pid]["defense"]))
+			var score = game_state.get_score(pid)
+			for member_id in room["players"]:
+				rpc_id(int(member_id), "sync_score", pid, score["kills"], score["deaths"])
+	for member_id in room["players"]:
+		rpc_id(int(member_id), "match_started", room_id, int(room.get("kill_limit", 0)))
+	for pid in room["players"]:
+		var st = game_state.get_player(pid)
+		var scene_path = st["scene"] if typeof(st) == TYPE_DICTIONARY and st.has("scene") else car.resource_path
+		var mods = st["mods"] if typeof(st) == TYPE_DICTIONARY and st.has("mods") else []
+		# Spawn on server
+		_despawn_player(pid)
+		add_player(int(pid), scene_path, mods)
+		# Spawn on clients
+		for member_id in room["players"]:
+			rpc_id(int(member_id), "spawn_player", int(pid), scene_path, mods)
+	for member_id in room["players"]:
+		rpc_id(int(member_id), "room_updated", room)
+	_broadcast_rooms_list()
+
+func _end_match(room_id: String, winner_id: String) -> void:
+	if not rooms.has(room_id):
+		return
+	var room = rooms[room_id]
+	room["status"] = "lobby"
+	rooms[room_id] = room
+	for pid in room["players"]:
+		_despawn_player(pid)
+		if game_state.players.has(pid):
+			game_state.players[pid]["kills"] = 0
+			game_state.players[pid]["deaths"] = 0
+		for member_id in room["players"]:
+			rpc_id(int(member_id), "despawn_player", pid)
+	for member_id in room["players"]:
+		rpc_id(int(member_id), "match_ended", room_id, winner_id)
+		rpc_id(int(member_id), "room_updated", room)
+	_broadcast_rooms_list()
+
+func _on_refresh_rooms_pressed() -> void:
+	if multiplayer.multiplayer_peer:
+		rpc_id(1, "list_rooms")
+
+func _on_create_room_pressed() -> void:
+	if not multiplayer.multiplayer_peer:
+		return
+	var name := "Room %s" % str(_next_room_id)
+	if room_name_input and room_name_input.text.strip_edges() != "":
+		name = room_name_input.text.strip_edges()
+	var max_players := int(max_players_input.value) if max_players_input else 8
+	var kill_limit := int(kill_limit_input.value) if kill_limit_input else 10
+	rpc_id(1, "create_room", name, max_players, kill_limit)
+
+func _on_join_room_pressed() -> void:
+	if not multiplayer.multiplayer_peer or not rooms_list_widget:
+		return
+	var idx = rooms_list_widget.get_selected_items()
+	if idx.is_empty():
+		_set_lobby_status("Select a room to join")
+		return
+	var room_id = str(rooms_list_widget.get_item_metadata(idx[0]))
+	if room_id == "":
+		return
+	rpc_id(1, "join_room", room_id)
+
+func _on_leave_room_pressed() -> void:
+	if multiplayer.multiplayer_peer:
+		rpc_id(1, "leave_room")
+
+func _on_start_match_pressed() -> void:
+	if multiplayer.multiplayer_peer and current_room_id != "":
+		rpc_id(1, "start_match", current_room_id)
+
+@rpc("any_peer", "reliable")
+func list_rooms() -> void:
+	if not multiplayer.is_server():
+		return
+	var list: Array = []
+	for room_id in rooms.keys():
+		var room = rooms[room_id]
+		if room.get("status", "lobby") == "lobby":
+			list.append(_build_room_summary(room))
+	rpc_id(multiplayer.get_remote_sender_id(), "rooms_list", list)
+
+@rpc("any_peer", "reliable")
+func create_room(name: String, max_players: int, kill_limit: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var pid = str(multiplayer.get_remote_sender_id())
+	if player_room.has(pid):
+		rpc_id(int(pid), "room_error", "Leave your current room first")
+		return
+	var room_id := str(_next_room_id)
+	_next_room_id += 1
+	var room = {
+		"id": room_id,
+		"name": name,
+		"max_players": max_players,
+		"players": [pid],
+		"leader": pid,
+		"status": "lobby",
+		"kill_limit": kill_limit
+	}
+	rooms[room_id] = room
+	player_room[pid] = room_id
+	_broadcast_rooms_list()
+	rpc_id(int(pid), "room_joined", room_id, room)
+
+@rpc("any_peer", "reliable")
+func join_room(room_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var pid = str(multiplayer.get_remote_sender_id())
+	if not rooms.has(room_id):
+		rpc_id(int(pid), "room_error", "Room not found")
+		return
+	if player_room.has(pid):
+		rpc_id(int(pid), "room_error", "Leave your current room first")
+		return
+	var room = rooms[room_id]
+	if room.get("status", "lobby") != "lobby":
+		rpc_id(int(pid), "room_error", "Match already started")
+		return
+	if room["players"].size() >= int(room.get("max_players", 0)):
+		rpc_id(int(pid), "room_error", "Room is full")
+		return
+	room["players"].append(pid)
+	rooms[room_id] = room
+	player_room[pid] = room_id
+	_broadcast_rooms_list()
+	for member_id in room["players"]:
+		rpc_id(int(member_id), "room_updated", room)
+	rpc_id(int(pid), "room_joined", room_id, room)
+
+@rpc("any_peer", "reliable")
+func leave_room() -> void:
+	if not multiplayer.is_server():
+		return
+	var pid = str(multiplayer.get_remote_sender_id())
+	_remove_from_room(int(pid), true)
+
+@rpc("any_peer", "reliable")
+func start_match(room_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var pid = str(multiplayer.get_remote_sender_id())
+	if not rooms.has(room_id):
+		return
+	var room = rooms[room_id]
+	if str(room.get("leader", "")) != pid:
+		rpc_id(int(pid), "room_error", "Only the leader can start")
+		return
+	_start_match(room_id)
+
+@rpc("any_peer", "reliable")
+func rooms_list(rooms_array: Array) -> void:
+	if not rooms_list_widget:
+		return
+	rooms_list_widget.clear()
+	for room in rooms_array:
+		var label = "%s (%s/%s) - %s kills" % [
+			str(room.get("name", "Room")),
+			str(room.get("players", 0)),
+			str(room.get("max_players", 0)),
+			str(room.get("kill_limit", 0))
+		]
+		var idx = rooms_list_widget.add_item(label)
+		rooms_list_widget.set_item_metadata(idx, room.get("id", ""))
+
+@rpc("any_peer", "reliable")
+func room_joined(room_id: String, room_data: Dictionary) -> void:
+	current_room_id = room_id
+	current_room = room_data
+	_update_room_ui(room_data)
+	_set_lobby_status("Joined room")
+
+@rpc("any_peer", "reliable")
+func room_left() -> void:
+	current_room_id = ""
+	current_room = {}
+	if room_players_list:
+		room_players_list.clear()
+	if room_title_label:
+		room_title_label.text = "Room"
+	if room_info_label:
+		room_info_label.text = "Waiting..."
+	_set_lobby_status("Left room")
+
+@rpc("any_peer", "reliable")
+func room_updated(room_data: Dictionary) -> void:
+	if current_room_id != str(room_data.get("id", "")):
+		return
+	current_room = room_data
+	_update_room_ui(room_data)
+
+@rpc("any_peer", "reliable")
+func room_error(message: String) -> void:
+	_set_lobby_status(message)
+
+@rpc("any_peer", "reliable")
+func match_started(room_id: String, _kill_limit: int) -> void:
+	if current_room_id != room_id:
+		return
+	in_match = true
+	_show_lobby(false)
+	_ensure_level_loaded()
+
+@rpc("any_peer", "reliable")
+func match_ended(room_id: String, winner_id: String) -> void:
+	if current_room_id != room_id:
+		return
+	in_match = false
+	_show_lobby(true)
+	_set_lobby_status("Match ended. Winner: %s" % winner_id)
+
+@rpc("any_peer", "reliable")
+func despawn_player(pid: String) -> void:
+	_despawn_player(pid)
 
 @rpc("any_peer", "reliable")
 func sync_score(player_id: String, kills: int, deaths: int) -> void:
@@ -597,6 +976,13 @@ func _send_scores_to(peer_id: int) -> void:
 	for player_id in game_state.players.keys():
 		var score = game_state.get_score(player_id)
 		rpc_id(peer_id, "sync_score", player_id, score["kills"], score["deaths"])
+
+func _defer_unfreeze(car_node: Node) -> void:
+	await get_tree().create_timer(0.1).timeout
+	if is_instance_valid(car_node):
+		car_node.freeze = false
+		if car_node.has_method("set_sleeping"):
+			car_node.set_sleeping(false)
 
 func _start_server(server_port: int, max_players: int) -> bool:
 	var error = peer.create_server(server_port, max_players)
