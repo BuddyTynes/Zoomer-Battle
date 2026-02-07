@@ -11,7 +11,9 @@ func add_player(player_id: String, health: int, defense: int, car_scene: String)
 			"health": health,
 			"defense": defense,
 			"scene": car_scene,
-			"mods": []
+			"mods": [],
+			"kills": 0,
+			"deaths": 0
 		}
 	else:
 		print("Player", player_id, "already exists!")
@@ -31,6 +33,29 @@ func add_mod(player_id: String, mod) -> void:
 		players[player_id]["mods"].append(mod)
 	else:
 		print("Player", player_id, "not found!")
+
+func add_kill(player_id: String) -> void:
+	if players.has(player_id):
+		players[player_id]["kills"] += 1
+	else:
+		print("Player", player_id, "not found!")
+
+func add_death(player_id: String) -> void:
+	if players.has(player_id):
+		players[player_id]["deaths"] += 1
+	else:
+		print("Player", player_id, "not found!")
+
+func get_score(player_id: String) -> Dictionary:
+	if players.has(player_id):
+		return {
+			"kills": players[player_id].get("kills", 0),
+			"deaths": players[player_id].get("deaths", 0)
+		}
+	return {
+		"kills": 0,
+		"deaths": 0
+	}
 
 # Remove a player
 func remove_player(player_id: String) -> void:

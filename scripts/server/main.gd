@@ -15,6 +15,9 @@ var car_scene
 const RESPAWN_TIME := 3
 const MAX_HEALTH := 100
 const HIT_DAMAGE := 30
+const RESPAWN_CLEARANCE := 1.5
+const RESPAWN_RAY_HEIGHT := 10.0
+const RESPAWN_RAY_DEPTH := 50.0
 const DEFAULT_PORT := 42069
 const DEFAULT_MAX_PLAYERS := 9
 const DEFAULT_HOST := "178.128.75.89"
@@ -100,6 +103,8 @@ func set_peer_data(pid: int, car_scene_path) -> void:
 					rpc_id(pid, "spawn_player", existing_pid, existing["scene"], other_mods)
 		# Add on server scene and record state
 		add_player(pid, car_scene_path, joiner_mods)
+		# Send score syncs to the joiner
+		_send_scores_to(pid)
 		
 #  SSS   EEEE  RRRR   V   V  EEEE  RRRR
 # S      E     R   R  V   V  E     R   R
@@ -148,6 +153,18 @@ func _get_next_spawn_position() -> Vector3:
 	_next_spawn_index += 1
 	return n.global_transform.origin
 
+func _adjust_spawn_position(spawn_pos: Vector3, exclude: Array = []) -> Vector3:
+	var space_state = get_world_3d().direct_space_state
+	var from = spawn_pos + Vector3.UP * RESPAWN_RAY_HEIGHT
+	var to = spawn_pos - Vector3.UP * RESPAWN_RAY_DEPTH
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	query.exclude = exclude
+	query.collide_with_areas = false
+	var hit = space_state.intersect_ray(query)
+	if hit and hit.has("position"):
+		return hit["position"] + Vector3.UP * RESPAWN_CLEARANCE
+	return spawn_pos + Vector3.UP * RESPAWN_CLEARANCE
+
 
 @rpc("any_peer", "reliable")
 func spawn_player(pid: int, car_scene_path, mods) -> void:
@@ -163,6 +180,10 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 	if multiplayer.is_server():
 		# Adding our players initial data.
 		game_state.add_player(str(pid), MAX_HEALTH, 100, car_scene_path)
+		# Broadcast initial score for this player
+		var score = game_state.get_score(str(pid))
+		for peer_id in multiplayer.get_peers():
+			rpc_id(peer_id, "sync_score", str(pid), score["kills"], score["deaths"])
 		# Persist any provided mods
 		if typeof(mods) == TYPE_ARRAY:
 			for m in mods:
@@ -397,8 +418,9 @@ func respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> 
 			car_node.set_multiplayer_authority(pid_int)
 		# Temporarily freeze while repositioning
 		car_node.freeze = true
+		var safe_spawn = _adjust_spawn_position(spawn_pos, [car_node])
 		var t = car_node.global_transform
-		t.origin = spawn_pos + Vector3(0, 1.0, 0)
+		t.origin = safe_spawn
 		car_node.global_transform = t
 		# Restore collisions
 		if car_node.has_meta("_orig_layer"):
@@ -471,6 +493,18 @@ func hit_body(hit_body_name, pid):
 	# Update the victim, not the shooter
 	game_state.update_player(hit_body_name, int(player.health), int(player.defense))
 	if int(player.health) <= 0:
+		# Update scores on server
+		if multiplayer.is_server():
+			game_state.add_death(hit_body_name)
+			if pid != null:
+				game_state.add_kill(str(pid))
+			var victim_score = game_state.get_score(hit_body_name)
+			for peer_id in multiplayer.get_peers():
+				rpc_id(peer_id, "sync_score", hit_body_name, victim_score["kills"], victim_score["deaths"])
+			if pid != null:
+				var killer_score = game_state.get_score(str(pid))
+				for peer_id in multiplayer.get_peers():
+					rpc_id(peer_id, "sync_score", str(pid), killer_score["kills"], killer_score["deaths"])
 		# Run on server immediately, then notify clients only
 		player_dead(pid, hit_body_name)
 		for peer_id in multiplayer.get_peers():
@@ -548,6 +582,21 @@ func _on_server_disconnected() -> void:
 	multiplayer.multiplayer_peer = null
 	if start:
 		start.show()
+
+@rpc("any_peer", "reliable")
+func sync_score(player_id: String, kills: int, deaths: int) -> void:
+	if level_instance and level_instance.has_node("GUI"):
+		if str(multiplayer.get_unique_id()) == str(player_id):
+			var gui_node = level_instance.get_node("GUI")
+			if gui_node.has_method("set_score"):
+				gui_node.set_score(kills, deaths)
+
+func _send_scores_to(peer_id: int) -> void:
+	if not multiplayer.is_server():
+		return
+	for player_id in game_state.players.keys():
+		var score = game_state.get_score(player_id)
+		rpc_id(peer_id, "sync_score", player_id, score["kills"], score["deaths"])
 
 func _start_server(server_port: int, max_players: int) -> bool:
 	var error = peer.create_server(server_port, max_players)
