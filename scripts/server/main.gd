@@ -32,6 +32,7 @@ const HIT_DAMAGE := 30
 const RESPAWN_CLEARANCE := 3.0
 const RESPAWN_RAY_HEIGHT := 10.0
 const RESPAWN_RAY_DEPTH := 50.0
+const RESPAWN_FREEZE_TIME := 0.35
 const DEFAULT_PORT := 42069
 const DEFAULT_MAX_PLAYERS := 9
 const DEFAULT_HOST := "178.128.75.89"
@@ -145,11 +146,17 @@ var _next_spawn_index: int = 0
 func _cache_spawn_points() -> void:
 	_spawn_points.clear()
 	if level_instance:
-		if level_instance.has_node("SpawnPoints"):
-			var sp = level_instance.get_node("SpawnPoints")
+		var spawn_parents = level_instance.find_children("SpawnPoints", "Node3D", true, false)
+		for sp in spawn_parents:
 			for c in sp.get_children():
 				if c is Node3D:
 					_spawn_points.append(c)
+		var grouped = level_instance.get_tree().get_nodes_in_group("SpawnPoint")
+		for node in grouped:
+			if node is Node3D and not _spawn_points.has(node):
+				_spawn_points.append(node)
+	if _spawn_points.size() > 1:
+		_spawn_points.shuffle()
 
 func _get_next_spawn_position() -> Vector3:
 	if _spawn_points.size() == 0:
@@ -158,7 +165,7 @@ func _get_next_spawn_position() -> Vector3:
 	_next_spawn_index += 1
 	return n.global_transform.origin
 
-func _adjust_spawn_position(spawn_pos: Vector3, exclude: Array = []) -> Vector3:
+func _adjust_spawn_position(spawn_pos: Vector3, exclude: Array = [], clearance: float = RESPAWN_CLEARANCE) -> Vector3:
 	var space_state = get_world_3d().direct_space_state
 	var from = spawn_pos + Vector3.UP * RESPAWN_RAY_HEIGHT
 	var to = spawn_pos - Vector3.UP * RESPAWN_RAY_DEPTH
@@ -167,8 +174,31 @@ func _adjust_spawn_position(spawn_pos: Vector3, exclude: Array = []) -> Vector3:
 	query.collide_with_areas = false
 	var hit = space_state.intersect_ray(query)
 	if hit and hit.has("position"):
-		return hit["position"] + Vector3.UP * RESPAWN_CLEARANCE
-	return spawn_pos + Vector3.UP * RESPAWN_CLEARANCE
+		return hit["position"] + Vector3.UP * clearance
+	return spawn_pos + Vector3.UP * clearance
+
+func _get_car_clearance(car_node: Node) -> float:
+	var clearance := RESPAWN_CLEARANCE
+	if car_node:
+		var shapes = car_node.find_children("", "CollisionShape3D", true, false)
+		var min_y := INF
+		for s in shapes:
+			if s is CollisionShape3D and s.shape:
+				var shape = s.shape
+				var extent := 0.0
+				if shape is BoxShape3D:
+					extent = shape.size.y * 0.5
+				elif shape is CapsuleShape3D:
+					extent = shape.height * 0.5 + shape.radius
+				elif shape is SphereShape3D:
+					extent = shape.radius
+				elif shape is CylinderShape3D:
+					extent = shape.height * 0.5 + shape.radius
+				var local_pos = car_node.to_local(s.global_transform.origin)
+				min_y = min(min_y, local_pos.y - extent)
+		if min_y != INF:
+			clearance = max(clearance, -min_y + 0.5)
+	return clearance
 
 
 @rpc("any_peer", "reliable")
@@ -200,6 +230,12 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 	# Cache default collision layers for respawn restores
 	car_instance.set_meta("_orig_layer", car_instance.collision_layer)
 	car_instance.set_meta("_orig_mask", car_instance.collision_mask)
+	# Spawn safely to avoid impulse on load
+	car_instance.collision_layer = 0
+	car_instance.collision_mask = 0
+	car_instance.freeze = true
+	if car_instance.has_method("set_sleeping"):
+		car_instance.set_sleeping(true)
 	car_controller.add_child(car_instance)
 	if typeof(mods) == TYPE_ARRAY and not mods.is_empty():
 		for mod in mods: # load mods and add child to this player's car
@@ -222,7 +258,12 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 				var cam = level_instance.get_node("Camera3D")
 				cam.follow_this = car_instance
 			
-	car_instance.global_transform.origin = Vector3(0, 2, 0)
+	var clearance = _get_car_clearance(car_instance)
+	var spawn = _adjust_spawn_position(_get_next_spawn_position(), [car_instance], clearance)
+	car_instance.global_transform.origin = spawn
+	car_instance.linear_velocity = Vector3.ZERO
+	car_instance.angular_velocity = Vector3.ZERO
+	_defer_respawn_enable(car_instance)
 	print("Player with ID " + str(pid) + " added to the game.")
 
 func _ensure_player_state(pid: int, car_scene_path, mods) -> void:
@@ -432,29 +473,23 @@ func respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> 
 		var pid_int = int(pid)
 		if car_node.has_method("set_multiplayer_authority"):
 			car_node.set_multiplayer_authority(pid_int)
-		# Temporarily freeze while repositioning
+		# Temporarily disable collisions and freeze while repositioning
+		car_node.collision_layer = 0
+		car_node.collision_mask = 0
 		car_node.freeze = true
 		if car_node.has_method("set_sleeping"):
 			car_node.set_sleeping(true)
-		var safe_spawn = _adjust_spawn_position(spawn_pos, [car_node])
+		var clearance = _get_car_clearance(car_node)
+		var safe_spawn = _adjust_spawn_position(spawn_pos, [car_node], clearance)
 		var t = car_node.global_transform
 		t.origin = safe_spawn
 		car_node.global_transform = t
-		# Restore collisions
-		if car_node.has_meta("_orig_layer"):
-			car_node.collision_layer = int(car_node.get_meta("_orig_layer"))
-		else:
-			car_node.collision_layer = 1
-		if car_node.has_meta("_orig_mask"):
-			car_node.collision_mask = int(car_node.get_meta("_orig_mask"))
-		else:
-			car_node.collision_mask = 1
 		# Clear KO state and motion
 		car_node.set_meta("dead", false)
 		car_node.linear_velocity = Vector3.ZERO
 		car_node.angular_velocity = Vector3.ZERO
 		car_node.show()
-		_defer_unfreeze(car_node)
+		_defer_respawn_enable(car_node)
 		# If this is my local player, retarget controller, GUI and camera
 		if str(multiplayer.get_unique_id()) == pid and level_instance:
 			if level_instance.has_node("VehicleController"):
@@ -977,10 +1012,23 @@ func _send_scores_to(peer_id: int) -> void:
 		var score = game_state.get_score(player_id)
 		rpc_id(peer_id, "sync_score", player_id, score["kills"], score["deaths"])
 
-func _defer_unfreeze(car_node: Node) -> void:
-	await get_tree().create_timer(0.1).timeout
+func _restore_collisions(car_node: Node) -> void:
+	if car_node.has_meta("_orig_layer"):
+		car_node.collision_layer = int(car_node.get_meta("_orig_layer"))
+	else:
+		car_node.collision_layer = 1
+	if car_node.has_meta("_orig_mask"):
+		car_node.collision_mask = int(car_node.get_meta("_orig_mask"))
+	else:
+		car_node.collision_mask = 1
+
+func _defer_respawn_enable(car_node: Node) -> void:
+	await get_tree().create_timer(RESPAWN_FREEZE_TIME).timeout
 	if is_instance_valid(car_node):
+		_restore_collisions(car_node)
 		car_node.freeze = false
+		car_node.linear_velocity = Vector3.ZERO
+		car_node.angular_velocity = Vector3.ZERO
 		if car_node.has_method("set_sleeping"):
 			car_node.set_sleeping(false)
 

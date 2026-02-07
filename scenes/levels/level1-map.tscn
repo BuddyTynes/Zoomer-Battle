@@ -1,5 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://cnqvqh5wgh37s"]
+[gd_scene load_steps=5 format=3 uid="uid://cnqvqh5wgh37s"]
 
+[ext_resource type="PackedScene" path="res://scenes/levels/spawn_point.tscn" id="2_0ffd5"]
 [ext_resource type="Texture2D" uid="uid://b66mox0xsn8by" path="res://assets/textures/696.jpg" id="2_gttk6"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_e2rjk"]
@@ -377,3 +378,36 @@ material = SubResource("StandardMaterial3D_uu818")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37113e-08, 1, 0, -1, -4.37113e-08, -18.0694, 22.2207, 56.1272)
+
+[node name="SpawnPoints" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.41086, 0)
+
+[node name="SpawnPoint" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.99401, 0)
+
+[node name="SpawnPoint2" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.0292, -1.99401, -7.00162)
+
+[node name="SpawnPoint3" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 43.757, -1.99401, 4.31734)
+
+[node name="SpawnPoint4" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 43.757, 0.610826, 106.69)
+
+[node name="SpawnPoint5" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46.1419, 0.610826, 106.69)
+
+[node name="SpawnPoint6" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46.1419, 0.610826, 28.2166)
+
+[node name="SpawnPoint7" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -81.1503, 0.610826, 28.2166)
+
+[node name="SpawnPoint8" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -81.1503, 0.610826, 134.947)
+
+[node name="SpawnPoint9" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -34.2219, 0.610826, 134.947)
+
+[node name="SpawnPoint10" parent="SpawnPoints" instance=ExtResource("2_0ffd5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 70.253, 0.610826, 134.947)
