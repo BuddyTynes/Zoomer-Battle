@@ -50,6 +50,24 @@ class_name VehicleController
 func _physics_process(_delta):
     if vehicle_node == null:
         return
+    if vehicle_node.has_meta("_respawn_guard_until"):
+        var until = int(vehicle_node.get_meta("_respawn_guard_until"))
+        if Time.get_ticks_msec() < until:
+            vehicle_node.brake_input = 0.0
+            vehicle_node.steering_input = 0.0
+            vehicle_node.throttle_input = 0.0
+            vehicle_node.handbrake_input = 0.0
+            vehicle_node.clutch_input = 0.0
+            return
+    if vehicle_node.has_meta("_input_lock_until"):
+        var until = int(vehicle_node.get_meta("_input_lock_until"))
+        if Time.get_ticks_msec() < until:
+            vehicle_node.brake_input = 0.0
+            vehicle_node.steering_input = 0.0
+            vehicle_node.throttle_input = 0.0
+            vehicle_node.handbrake_input = 0.0
+            vehicle_node.clutch_input = 0.0
+            return
     # Skip control while KO'd
     if vehicle_node.has_meta("dead") and vehicle_node.get_meta("dead") == true:
         return

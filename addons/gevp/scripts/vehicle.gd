@@ -628,6 +628,21 @@ func _physics_process(delta : float) -> void:
 	process_transmission()
 	process_drive(delta)
 	process_forces(delta)
+
+func reset_state() -> void:
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	local_velocity = Vector3.ZERO
+	speed = 0.0
+	motor_rpm = 0.0
+	current_gear = 0
+	requested_gear = 0
+	throttle_input = 0.0
+	brake_input = 0.0
+	steering_input = 0.0
+	handbrake_input = 0.0
+	clutch_input = 0.0
+	previous_global_position = global_position
 	process_stability()
 
 func process_drag() -> void:

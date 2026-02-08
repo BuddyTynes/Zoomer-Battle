@@ -12,6 +12,7 @@ func add_player(player_id: String, health: int, defense: int, car_scene: String)
 			"defense": defense,
 			"scene": car_scene,
 			"mods": [],
+			"shield": 0,
 			"kills": 0,
 			"deaths": 0
 		}
@@ -23,6 +24,14 @@ func update_player(player_id: String, health: int, defense: int) -> void:
 	if players.has(player_id):
 		players[player_id]["health"] = health
 		players[player_id]["defense"] = defense
+	else:
+		print("Player", player_id, "not found!")
+
+func update_player_stats(player_id: String, health: int, defense: int, shield: int) -> void:
+	if players.has(player_id):
+		players[player_id]["health"] = health
+		players[player_id]["defense"] = defense
+		players[player_id]["shield"] = shield
 	else:
 		print("Player", player_id, "not found!")
 		

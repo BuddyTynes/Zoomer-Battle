@@ -9,6 +9,14 @@ extends Control
 var respawn_timer: Timer
 var respawn_label: Label
 var score_label: Label
+var health_bg: ColorRect
+var health_fill: ColorRect
+var shield_bg: ColorRect
+var shield_fill: ColorRect
+var _health_ratio := 1.0
+var _shield_ratio := 0.0
+const _BAR_WIDTH := 220.0
+const _BAR_HEIGHT := 14.0
 
 func _process(delta):
 	if not is_instance_valid(vehicle):
@@ -21,6 +29,7 @@ func _process(delta):
 	gear_label.text = "Gear: " + str(vehicle.current_gear)
 
 func _ready() -> void:
+	_create_bars()
 	score_label = Label.new()
 	score_label.name = "Score"
 	score_label.text = "Kills: 0  Deaths: 0"
@@ -76,3 +85,65 @@ func hide_respawn() -> void:
 func set_score(kills: int, deaths: int) -> void:
 	if score_label:
 		score_label.text = "Kills: %s  Deaths: %s" % [str(kills), str(deaths)]
+
+func set_health_shield(health: int, max_health: int, shield: int, max_shield: int) -> void:
+	_health_ratio = 0.0 if max_health <= 0 else clampf(float(health) / float(max_health), 0.0, 1.0)
+	_shield_ratio = 0.0 if max_shield <= 0 else clampf(float(shield) / float(max_shield), 0.0, 1.0)
+	_update_bars()
+
+func _create_bars() -> void:
+	# Health bar
+	health_bg = ColorRect.new()
+	health_bg.color = Color(0, 0, 0, 0.6)
+	health_bg.anchor_left = 0.0
+	health_bg.anchor_top = 0.0
+	health_bg.anchor_right = 0.0
+	health_bg.anchor_bottom = 0.0
+	health_bg.offset_left = 16
+	health_bg.offset_top = 16
+	health_bg.offset_right = 16 + _BAR_WIDTH
+	health_bg.offset_bottom = 16 + _BAR_HEIGHT
+	add_child(health_bg)
+
+	health_fill = ColorRect.new()
+	health_fill.color = Color(0.86, 0.2, 0.2, 1)
+	health_fill.anchor_left = 0.0
+	health_fill.anchor_top = 0.0
+	health_fill.anchor_right = 0.0
+	health_fill.anchor_bottom = 0.0
+	health_fill.offset_left = 0
+	health_fill.offset_top = 0
+	health_fill.offset_right = _BAR_WIDTH
+	health_fill.offset_bottom = _BAR_HEIGHT
+	health_bg.add_child(health_fill)
+
+	# Shield bar
+	shield_bg = ColorRect.new()
+	shield_bg.color = Color(0, 0, 0, 0.6)
+	shield_bg.anchor_left = 0.0
+	shield_bg.anchor_top = 0.0
+	shield_bg.anchor_right = 0.0
+	shield_bg.anchor_bottom = 0.0
+	shield_bg.offset_left = 16
+	shield_bg.offset_top = 36
+	shield_bg.offset_right = 16 + _BAR_WIDTH
+	shield_bg.offset_bottom = 36 + _BAR_HEIGHT
+	add_child(shield_bg)
+
+	shield_fill = ColorRect.new()
+	shield_fill.color = Color(0.2, 0.55, 0.95, 1)
+	shield_fill.anchor_left = 0.0
+	shield_fill.anchor_top = 0.0
+	shield_fill.anchor_right = 0.0
+	shield_fill.anchor_bottom = 0.0
+	shield_fill.offset_left = 0
+	shield_fill.offset_top = 0
+	shield_fill.offset_right = _BAR_WIDTH
+	shield_fill.offset_bottom = _BAR_HEIGHT
+	shield_bg.add_child(shield_fill)
+
+func _update_bars() -> void:
+	if health_fill:
+		health_fill.offset_right = _BAR_WIDTH * _health_ratio
+	if shield_fill:
+		shield_fill.offset_right = _BAR_WIDTH * _shield_ratio

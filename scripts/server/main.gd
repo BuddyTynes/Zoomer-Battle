@@ -9,6 +9,9 @@ extends Node3D
 @onready var end_game_winner: Label = get_node_or_null("UI/EndGame/Panel/VBox/Winner")
 @onready var end_game_scores: ItemList = get_node_or_null("UI/EndGame/Panel/VBox/Scores")
 @onready var end_game_continue: Button = get_node_or_null("UI/EndGame/Panel/VBox/Continue")
+@onready var pause_menu: Control = get_node_or_null("UI/PauseMenu")
+@onready var pause_resume: Button = get_node_or_null("UI/PauseMenu/Panel/VBox/Resume")
+@onready var pause_back: Button = get_node_or_null("UI/PauseMenu/Panel/VBox/BackToLobby")
 @onready var rooms_list_widget: ItemList = get_node_or_null("UI/Lobby/Root/RoomsPanel/RoomsVBox/RoomsList")
 @onready var refresh_rooms_button: Button = get_node_or_null("UI/Lobby/Root/RoomsPanel/RoomsVBox/RoomsButtons/RefreshRooms")
 @onready var join_room_button: Button = get_node_or_null("UI/Lobby/Root/RoomsPanel/RoomsVBox/RoomsButtons/JoinRoom")
@@ -33,11 +36,27 @@ var car_scene
 const RESPAWN_TIME := 3
 const MAX_HEALTH := 100
 const HIT_DAMAGE := 30
+const MAX_SHIELD := 100
+const SHIELD_PICKUP_AMOUNT := 40
+const SHIELD_RESPAWN_TIME := 30.0
+const SPAWN_INPUT_LOCK_MS := 1200
+const SPAWN_FREEZE_TIME := 1.2
+const SPAWN_BONUS_CLEARANCE := 2.0
+const GUARD_LOCK_TIME_MS := 2200
+const GUARD_SETTLE_TIME := 1.2
+const GUARD_POSITION_LOCK := true
+const OOB_Y_THRESHOLD := -50.0
+const OOB_DIST_THRESHOLD := 600.0
+const OOB_RESPAWN_COOLDOWN_MS := 3000
+const OOB_GUARD_MS := 2000
+const SPAWN_MIN_SEPARATION := 16.0
+const SPAWN_RETRY_COUNT := 5
+const RAY_ENABLE_DELAY := 2.0
 const RESPAWN_CLEARANCE := 3.0
 const RESPAWN_RAY_HEIGHT := 10.0
 const RESPAWN_RAY_DEPTH := 50.0
-const RESPAWN_FREEZE_TIME := 0.35
-const RESPAWN_UNFREEZE_DELAY := 0.08
+const RESPAWN_FREEZE_TIME := 0.8
+const RESPAWN_UNFREEZE_DELAY := 0.2
 const RESPAWN_BONUS_CLEARANCE := 2.0
 const RESPAWN_GUARD_MS := 600
 const MAX_VERTICAL_SPEED := 50.0
@@ -76,6 +95,10 @@ func _ready() -> void:
 		start_match_button.pressed.connect(_on_start_match_pressed)
 	if end_game_continue:
 		end_game_continue.pressed.connect(_on_end_game_continue_pressed)
+	if pause_resume:
+		pause_resume.pressed.connect(_on_pause_resume_pressed)
+	if pause_back:
+		pause_back.pressed.connect(_on_pause_back_pressed)
 	if car_scene == null or car_scene == "":
 		car_scene = car.resource_path
 	_parse_cmdline()
@@ -175,6 +198,100 @@ func _get_next_spawn_position() -> Vector3:
 	_next_spawn_index += 1
 	return n.global_transform.origin
 
+func _choose_spawn_position(exclude_pid: String = "") -> Vector3:
+	if _spawn_points.size() == 0:
+		return Vector3(0, 2, 0)
+	var best_pos = _spawn_points[0].global_transform.origin
+	var best_score := -INF
+	for sp in _spawn_points:
+		var pos = sp.global_transform.origin
+		var min_dist := INF
+		if car_controller:
+			for child in car_controller.get_children():
+				if exclude_pid != "" and child.name == exclude_pid:
+					continue
+				if child is Node3D:
+					var d = pos.distance_to(child.global_transform.origin)
+					min_dist = min(min_dist, d)
+		if min_dist == INF:
+			min_dist = SPAWN_MIN_SEPARATION
+		var score = min_dist
+		if score > best_score:
+			best_score = score
+			best_pos = pos
+	return best_pos
+
+func _choose_spawn_position_reserved(exclude_pid: String, reserved_positions: Array) -> Vector3:
+	if _spawn_points.size() == 0:
+		return Vector3(0, 2, 0)
+	var best_pos = _spawn_points[0].global_transform.origin
+	var best_score := -INF
+	for sp in _spawn_points:
+		var pos = sp.global_transform.origin
+		var min_dist := INF
+		for reserved in reserved_positions:
+			if reserved is Vector3:
+				min_dist = min(min_dist, pos.distance_to(reserved))
+		if car_controller:
+			for child in car_controller.get_children():
+				if exclude_pid != "" and child.name == exclude_pid:
+					continue
+				if child is Node3D:
+					var d = pos.distance_to(child.global_transform.origin)
+					min_dist = min(min_dist, d)
+		if min_dist == INF:
+			min_dist = SPAWN_MIN_SEPARATION
+		var score = min_dist
+		if score > best_score:
+			best_score = score
+			best_pos = pos
+	return best_pos
+
+func _choose_unique_spawn(reserved_positions: Array) -> Vector3:
+	if _spawn_points.size() == 0:
+		return Vector3(0, 2, 0)
+	var candidates: Array = []
+	for sp in _spawn_points:
+		candidates.append(sp)
+	# Prefer positions not already reserved
+	for sp in candidates:
+		var pos = sp.global_transform.origin
+		var clash := false
+		for reserved in reserved_positions:
+			if reserved is Vector3 and pos.distance_to(reserved) < 0.1:
+				clash = true
+				break
+		if not clash:
+			return pos
+	# Fallback to farthest from reserved
+	return _choose_spawn_position_reserved("", reserved_positions)
+
+func _min_distance_to_other_cars(pos: Vector3, exclude_pid: String = "") -> float:
+	var min_dist := INF
+	if car_controller:
+		for child in car_controller.get_children():
+			if exclude_pid != "" and child.name == exclude_pid:
+				continue
+			if child is Node3D:
+				min_dist = min(min_dist, pos.distance_to(child.global_transform.origin))
+	if min_dist == INF:
+		min_dist = SPAWN_MIN_SEPARATION
+	return min_dist
+
+func _resolve_spawn_overlap(car_node: Node, exclude_pid: String = "") -> void:
+	if car_node == null:
+		return
+	var clearance = _get_car_clearance(car_node) + SPAWN_BONUS_CLEARANCE
+	for _i in range(SPAWN_RETRY_COUNT):
+		var candidate = _choose_spawn_position(exclude_pid)
+		var safe = _adjust_spawn_position(candidate, [car_node], clearance)
+		if _min_distance_to_other_cars(safe, exclude_pid) >= SPAWN_MIN_SEPARATION:
+			car_node.global_transform = Transform3D(Basis.IDENTITY, safe)
+			return
+	# Fallback to farthest even if too close
+	var fallback = _adjust_spawn_position(_choose_spawn_position(exclude_pid), [car_node], clearance)
+	car_node.global_transform = Transform3D(Basis.IDENTITY, fallback)
+
 
 func _adjust_spawn_position(spawn_pos: Vector3, exclude: Array = [], clearance: float = RESPAWN_CLEARANCE) -> Vector3:
 	if not _vec_ok(spawn_pos):
@@ -219,14 +336,14 @@ func _get_car_clearance(car_node: Node) -> float:
 
 
 @rpc("any_peer", "reliable")
-func spawn_player(pid: int, car_scene_path, mods) -> void:
+func spawn_player(pid: int, car_scene_path, mods, spawn_pos: Vector3 = Vector3(INF, INF, INF)) -> void:
 	if level_instance == null:
 		add_level()
 	if car_controller == null and level_instance:
 		car_controller = level_instance.get_node_or_null("VehicleController")
-	add_player(pid, car_scene_path, mods)
+	add_player(pid, car_scene_path, mods, spawn_pos)
 # must always be called after add_level has been called once!
-func add_player(pid: int, car_scene_path, mods) -> void:
+func add_player(pid: int, car_scene_path, mods, spawn_pos: Vector3 = Vector3(INF, INF, INF)) -> void:
 	# Check if the player with the same pid already exists in the level
 	if level_instance:
 		for child in level_instance.get_node("VehicleController").get_children():
@@ -239,6 +356,8 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 		var score = game_state.get_score(str(pid))
 		for peer_id in multiplayer.get_peers():
 			rpc_id(peer_id, "sync_score", str(pid), score["kills"], score["deaths"])
+		_send_stats_to(str(pid))
+		_send_stats_to(str(pid))
 	# add the car
 	var car_res = load(car_scene_path) # load resource without clobbering global 'car'
 	var car_instance = car_res.instantiate()
@@ -274,14 +393,19 @@ func add_player(pid: int, car_scene_path, mods) -> void:
 			if level_instance.has_node("Camera3D"):
 				var cam = level_instance.get_node("Camera3D")
 				cam.follow_this = car_instance
-		_apply_respawn_guard(car_instance)
+		car_instance.set_meta("_input_lock_until", Time.get_ticks_msec() + SPAWN_INPUT_LOCK_MS)
+		car_instance.set_meta("_oob_guard_until", Time.get_ticks_msec() + OOB_GUARD_MS)
+	_apply_respawn_guard(car_instance)
 			
-	var clearance = _get_car_clearance(car_instance)
-	var spawn = _adjust_spawn_position(_get_next_spawn_position(), [car_instance], clearance)
+	var clearance = _get_car_clearance(car_instance) + SPAWN_BONUS_CLEARANCE
+	var spawn = spawn_pos
+	if not spawn.is_finite():
+		spawn = _choose_spawn_position(str(pid))
+	spawn = _adjust_spawn_position(spawn, [car_instance], clearance)
 	car_instance.global_transform = Transform3D(Basis.IDENTITY, spawn)
 	car_instance.linear_velocity = Vector3.ZERO
 	car_instance.angular_velocity = Vector3.ZERO
-	_defer_respawn_enable(car_instance)
+	_defer_spawn_enable(car_instance)
 	print("Player with ID " + str(pid) + " added to the game.")
 
 func _ensure_player_state(pid: int, car_scene_path, mods) -> void:
@@ -290,6 +414,8 @@ func _ensure_player_state(pid: int, car_scene_path, mods) -> void:
 		game_state.add_player(pid_str, MAX_HEALTH, 100, car_scene_path)
 	else:
 		game_state.players[pid_str]["scene"] = car_scene_path
+	if not game_state.players[pid_str].has("shield"):
+		game_state.players[pid_str]["shield"] = 0
 	if typeof(mods) == TYPE_ARRAY:
 		for m in mods:
 			if not game_state.players[pid_str]["mods"].has(m):
@@ -307,6 +433,10 @@ func _ensure_player_state(pid: int, car_scene_path, mods) -> void:
 func update_player_transform(pid: int, new_transform: Transform3D) -> void:
 	var player = car_controller.get_node_or_null(str(pid))
 	if player and pid != multiplayer.get_unique_id():
+		if player.has_meta("_guard_lock_until"):
+			var lock_until = int(player.get_meta("_guard_lock_until"))
+			if Time.get_ticks_msec() < lock_until:
+				return
 		# Validate incoming transform to avoid NaNs/huge values propagating
 		if _is_transform_valid(new_transform):
 			player.global_transform = new_transform.orthonormalized()
@@ -319,18 +449,50 @@ func _physics_process(_delta: float) -> void:
 		if !multiplayer.is_server():
 			if not is_instance_valid(vehicle_rigid_body):
 				return
+			if vehicle_rigid_body.has_meta("_guard_lock_until"):
+				var lock_until = int(vehicle_rigid_body.get_meta("_guard_lock_until"))
+				if Time.get_ticks_msec() < lock_until:
+					vehicle_rigid_body.linear_velocity = Vector3.ZERO
+					vehicle_rigid_body.angular_velocity = Vector3.ZERO
+					if GUARD_POSITION_LOCK and vehicle_rigid_body.has_meta("_guard_transform"):
+						var lock_xform = vehicle_rigid_body.get_meta("_guard_transform")
+						if lock_xform is Transform3D:
+							vehicle_rigid_body.global_transform = lock_xform
+					return
 			# Apply respawn guard to prevent launch/NaNs
 			if vehicle_rigid_body.has_meta("_respawn_guard_until"):
 				var until = int(vehicle_rigid_body.get_meta("_respawn_guard_until"))
 				if Time.get_ticks_msec() < until:
 					vehicle_rigid_body.linear_velocity = Vector3.ZERO
 					vehicle_rigid_body.angular_velocity = Vector3.ZERO
+					if GUARD_POSITION_LOCK and vehicle_rigid_body.has_meta("_guard_transform"):
+						var guard_xform = vehicle_rigid_body.get_meta("_guard_transform")
+						if guard_xform is Transform3D:
+							vehicle_rigid_body.global_transform = guard_xform
 					return
 				else:
 					vehicle_rigid_body.set_meta("_respawn_guard_until", null)
 					if vehicle_rigid_body.has_meta("_orig_gravity_scale"):
 						vehicle_rigid_body.gravity_scale = float(vehicle_rigid_body.get_meta("_orig_gravity_scale"))
 						vehicle_rigid_body.set_meta("_orig_gravity_scale", null)
+					if vehicle_rigid_body.has_meta("_orig_linear_damp"):
+						vehicle_rigid_body.linear_damp = float(vehicle_rigid_body.get_meta("_orig_linear_damp"))
+						vehicle_rigid_body.set_meta("_orig_linear_damp", null)
+					if vehicle_rigid_body.has_meta("_orig_angular_damp"):
+						vehicle_rigid_body.angular_damp = float(vehicle_rigid_body.get_meta("_orig_angular_damp"))
+						vehicle_rigid_body.set_meta("_orig_angular_damp", null)
+			if vehicle_rigid_body.freeze:
+				return
+			if vehicle_rigid_body.has_meta("_oob_guard_until"):
+				var oob_until = int(vehicle_rigid_body.get_meta("_oob_guard_until"))
+				if Time.get_ticks_msec() < oob_until:
+					return
+				else:
+					vehicle_rigid_body.set_meta("_oob_guard_until", null)
+			# Out-of-bounds soft respawn
+			if _is_out_of_bounds(vehicle_rigid_body.global_transform.origin):
+				_request_soft_respawn()
+				return
 			# Clamp extreme vertical velocity
 			if absf(vehicle_rigid_body.linear_velocity.y) > MAX_VERTICAL_SPEED:
 				var lv = vehicle_rigid_body.linear_velocity
@@ -372,6 +534,69 @@ func add_mod(mod_name, pickup_path := NodePath()):
 		rpc_id(1, "sync_mod", my_id, mod_name)
 		if String(pickup_path) != "":
 			rpc_id(1, "remove_pickup", pickup_path)
+
+func add_shield_pickup(amount: int, pickup_path := NodePath()) -> void:
+	if multiplayer.is_server():
+		_apply_shield(multiplayer.get_unique_id(), amount, pickup_path)
+	else:
+		rpc_id(1, "request_shield", amount, pickup_path)
+
+@rpc("any_peer", "reliable")
+func request_shield(amount: int, pickup_path := NodePath()) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender_id = multiplayer.get_remote_sender_id()
+	_apply_shield(sender_id, amount, pickup_path)
+
+func _apply_shield(pid: int, amount: int, pickup_path := NodePath()) -> void:
+	var pid_str := str(pid)
+	var st = game_state.get_player(pid_str)
+	if typeof(st) != TYPE_DICTIONARY:
+		return
+	var shield = int(st.get("shield", 0))
+	shield = clampi(shield + amount, 0, MAX_SHIELD)
+	game_state.update_player_stats(pid_str, int(st.get("health", MAX_HEALTH)), int(st.get("defense", 100)), shield)
+	_send_stats_to(pid_str)
+	# Remove pickup across all peers if a path was provided
+	if String(pickup_path) != "":
+		var node := get_node_or_null(pickup_path)
+		var scene_path := ""
+		var parent_path := NodePath()
+		var xform := Transform3D()
+		if node:
+			scene_path = node.scene_file_path
+			if node.get_parent():
+				parent_path = node.get_parent().get_path()
+			xform = node.global_transform
+		rpc("remove_pickup", pickup_path)
+		if node:
+			node.queue_free()
+		if scene_path != "" and String(parent_path) != "":
+			_schedule_pickup_respawn(scene_path, parent_path, xform)
+
+func _schedule_pickup_respawn(scene_path: String, parent_path: NodePath, xform: Transform3D) -> void:
+	await get_tree().create_timer(SHIELD_RESPAWN_TIME).timeout
+	_respawn_pickup(scene_path, parent_path, xform)
+
+func _respawn_pickup(scene_path: String, parent_path: NodePath, xform: Transform3D) -> void:
+	_spawn_pickup_local(scene_path, parent_path, xform)
+	for peer_id in multiplayer.get_peers():
+		rpc_id(peer_id, "spawn_pickup", scene_path, parent_path, xform)
+
+func _spawn_pickup_local(scene_path: String, parent_path: NodePath, xform: Transform3D) -> void:
+	var parent = get_node_or_null(parent_path)
+	if parent == null:
+		return
+	var scene = load(scene_path)
+	if scene == null:
+		return
+	var inst = scene.instantiate()
+	parent.add_child(inst)
+	inst.global_transform = xform
+
+@rpc("any_peer", "reliable")
+func spawn_pickup(scene_path: String, parent_path: NodePath, xform: Transform3D) -> void:
+	_spawn_pickup_local(scene_path, parent_path, xform)
 @rpc("any_peer", "reliable")
 func sync_mod(pid, mod_name):
 	# Entry point for mod sync. If called on server (from a client),
@@ -470,7 +695,10 @@ func finish_respawn(player_name: String, spawn_pos: Vector3) -> void:
 	if multiplayer.is_server():
 		var st = game_state.get_player(player_name)
 		if typeof(st) == TYPE_DICTIONARY:
-			game_state.update_player(player_name, MAX_HEALTH, st["defense"])
+			game_state.update_player_stats(player_name, MAX_HEALTH, int(st["defense"]), 0)
+			if game_state.players.has(player_name):
+				game_state.players[player_name]["shield"] = 0
+			_send_stats_to(player_name)
 			if game_state.players.has(player_name) and game_state.players[player_name].has("mods"):
 				game_state.players[player_name]["mods"].clear()
 
@@ -491,6 +719,13 @@ func hide_respawn_ui() -> void:
 
 @rpc("any_peer", "reliable")
 func respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> void:
+	_do_respawn(pid, car_scene_path, spawn_pos, true)
+
+@rpc("any_peer", "reliable")
+func soft_respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> void:
+	_do_respawn(pid, car_scene_path, spawn_pos, false)
+
+func _do_respawn(pid: String, car_scene_path: String, spawn_pos: Vector3, reset_stats: bool) -> void:
 	# Prefer reusing existing node to avoid queue_free/name races
 	var car_node: Node = null
 	if car_controller:
@@ -537,6 +772,16 @@ func respawn_player(pid: String, car_scene_path: String, spawn_pos: Vector3) -> 
 				cam.follow_this = car_node
 			# Also update our local reference used for transform syncing
 			vehicle_rigid_body = car_node
+			car_node.set_meta("_input_lock_until", Time.get_ticks_msec() + SPAWN_INPUT_LOCK_MS)
+			car_node.set_meta("_oob_guard_until", Time.get_ticks_msec() + OOB_GUARD_MS)
+	# Server authoritative state reset for respawn_player path
+	if multiplayer.is_server() and reset_stats:
+		var st = game_state.get_player(pid)
+		if typeof(st) == TYPE_DICTIONARY:
+			game_state.update_player_stats(pid, MAX_HEALTH, int(st.get("defense", 100)), 0)
+			if game_state.players.has(pid):
+				game_state.players[pid]["shield"] = 0
+			_send_stats_to(pid)
 	
 # from the gun mod reach out 
 # here we spawn_bullet
@@ -574,9 +819,16 @@ func hit_body(hit_body_name, pid):
 	var player = game_state.get_player(hit_body_name)
 	if typeof(player) != TYPE_DICTIONARY or not player.has("health"):
 		return
-	player.health = int(player.health) - HIT_DAMAGE
+	var shield = int(player.get("shield", 0))
+	var remaining_damage = HIT_DAMAGE
+	if shield > 0:
+		var absorbed = min(shield, HIT_DAMAGE)
+		shield -= absorbed
+		remaining_damage -= absorbed
+	player.health = int(player.health) - remaining_damage
 	# Update the victim, not the shooter
-	game_state.update_player(hit_body_name, int(player.health), int(player.defense))
+	game_state.update_player_stats(hit_body_name, int(player.health), int(player.defense), shield)
+	_send_stats_to(hit_body_name)
 	if int(player.health) <= 0:
 		# Update scores on server
 		if multiplayer.is_server():
@@ -644,7 +896,7 @@ func player_dead(_pid, hit_body_name):
 			# Also apply on the server
 			start_respawn(hit_body_name, RESPAWN_TIME)
 			await get_tree().create_timer(RESPAWN_TIME).timeout
-			var spawn := _get_next_spawn_position()
+			var spawn := _choose_spawn_position(hit_body_name)
 			var st = game_state.get_player(hit_body_name)
 			var scene_path = st["scene"] if typeof(st) == TYPE_DICTIONARY and st.has("scene") else car.resource_path
 			# Ask the owner to hide UI; send fresh car to all peers
@@ -681,6 +933,12 @@ func _on_server_disconnected() -> void:
 		start.show()
 	_show_lobby(false)
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if in_match:
+			_show_pause_menu(not (pause_menu and pause_menu.visible))
+			get_viewport().set_input_as_handled()
+
 func _on_peer_disconnected(peer_id: int) -> void:
 	if multiplayer.is_server():
 		_remove_from_room(peer_id, true)
@@ -694,6 +952,8 @@ func _show_lobby(visible: bool) -> void:
 		lobby.visible = visible
 	if end_game and visible:
 		end_game.visible = false
+	if pause_menu and visible:
+		pause_menu.visible = false
 	if visible:
 		_set_lobby_status("Connected")
 	else:
@@ -704,6 +964,24 @@ func _show_end_game(visible: bool) -> void:
 		end_game.visible = visible
 	if visible:
 		_show_lobby(false)
+
+func _show_pause_menu(visible: bool) -> void:
+	if pause_menu:
+		pause_menu.visible = visible
+	if visible:
+		_show_lobby(false)
+		if end_game:
+			end_game.visible = false
+
+func _reset_level() -> void:
+	if level_instance:
+		level_instance.queue_free()
+	level_instance = null
+	car_controller = null
+	vehicle_rigid_body = null
+	_spawn_points.clear()
+	_next_spawn_index = 0
+
 
 func _set_lobby_status(text: String) -> void:
 	if lobby_status_label:
@@ -792,9 +1070,8 @@ func _remove_from_room(peer_id: int, notify_peer: bool) -> void:
 	var room = rooms[room_id]
 	room["players"].erase(pid)
 	if room.get("status", "lobby") == "in_game":
-		_despawn_player(pid)
-		for member_id in room["players"]:
-			rpc_id(int(member_id), "despawn_player", pid)
+		_cleanup_room(room_id, "", "player_left")
+		return
 	if room["players"].is_empty():
 		rooms.erase(room_id)
 		_broadcast_rooms_list()
@@ -815,54 +1092,76 @@ func _start_match(room_id: String) -> void:
 	var room = rooms[room_id]
 	if room.get("status", "lobby") != "lobby":
 		return
+	_ensure_level_loaded()
 	room["status"] = "in_game"
+	rooms[room_id] = room
+	var reserved_spawns: Array = []
+	var spawn_map := {}
+	for pid in room["players"]:
+		var spawn = _choose_unique_spawn(reserved_spawns)
+		reserved_spawns.append(spawn)
+		spawn_map[pid] = spawn
+	room["spawn_map"] = spawn_map
 	rooms[room_id] = room
 	for pid in room["players"]:
 		if game_state.players.has(pid):
 			game_state.players[pid]["kills"] = 0
 			game_state.players[pid]["deaths"] = 0
-			game_state.update_player(pid, MAX_HEALTH, int(game_state.players[pid]["defense"]))
+			game_state.players[pid]["shield"] = 0
+			game_state.update_player_stats(pid, MAX_HEALTH, int(game_state.players[pid]["defense"]), 0)
 			var score = game_state.get_score(pid)
 			for member_id in room["players"]:
 				rpc_id(int(member_id), "sync_score", pid, score["kills"], score["deaths"])
+			_send_stats_to(pid)
 	for member_id in room["players"]:
 		rpc_id(int(member_id), "match_started", room_id, int(room.get("kill_limit", 0)))
 	for pid in room["players"]:
 		var st = game_state.get_player(pid)
 		var scene_path = st["scene"] if typeof(st) == TYPE_DICTIONARY and st.has("scene") else car.resource_path
 		var mods = st["mods"] if typeof(st) == TYPE_DICTIONARY and st.has("mods") else []
+		var spawn = spawn_map.get(pid, _choose_spawn_position(pid))
 		# Spawn on server
 		_despawn_player(pid)
-		add_player(int(pid), scene_path, mods)
+		add_player(int(pid), scene_path, mods, spawn)
 		# Spawn on clients
 		for member_id in room["players"]:
-			rpc_id(int(member_id), "spawn_player", int(pid), scene_path, mods)
+			rpc_id(int(member_id), "spawn_player", int(pid), scene_path, mods, spawn)
 	for member_id in room["players"]:
 		rpc_id(int(member_id), "room_updated", room)
 	_broadcast_rooms_list()
 
 func _end_match(room_id: String, winner_id: String) -> void:
+	_cleanup_room(room_id, winner_id, "match_ended")
+
+func _cleanup_room(room_id: String, winner_id: String, reason: String) -> void:
 	if not rooms.has(room_id):
 		return
 	var room = rooms[room_id]
+	var players: Array = room.get("players", []).duplicate()
+	if players.is_empty():
+		rooms.erase(room_id)
+		_broadcast_rooms_list()
+		return
 	room["status"] = "lobby"
+	room.erase("spawn_map")
 	rooms[room_id] = room
 	var scores := []
-	for pid in room["players"]:
+	for pid in players:
 		var score = game_state.get_score(pid)
 		scores.append({
 			"id": pid,
-			"kills": int(score["kills"]),
-			"deaths": int(score["deaths"])
+			"kills": int(score.get("kills", 0)),
+			"deaths": int(score.get("deaths", 0))
 		})
-	for pid in room["players"]:
+	for pid in players:
 		_despawn_player(pid)
 		if game_state.players.has(pid):
 			game_state.players[pid]["kills"] = 0
 			game_state.players[pid]["deaths"] = 0
-		for member_id in room["players"]:
+			game_state.players[pid]["shield"] = 0
+		for member_id in players:
 			rpc_id(int(member_id), "despawn_player", pid)
-	for member_id in room["players"]:
+	for member_id in players:
 		rpc_id(int(member_id), "match_ended", room_id, winner_id, scores)
 		rpc_id(int(member_id), "room_updated", room)
 	_broadcast_rooms_list()
@@ -1060,6 +1359,17 @@ func _on_end_game_continue_pressed() -> void:
 	if multiplayer.multiplayer_peer:
 		rpc_id(1, "list_rooms")
 
+func _on_pause_resume_pressed() -> void:
+	_show_pause_menu(false)
+
+func _on_pause_back_pressed() -> void:
+	_show_pause_menu(false)
+	if multiplayer.multiplayer_peer:
+		rpc_id(1, "leave_room")
+	_show_lobby(true)
+	if multiplayer.multiplayer_peer:
+		rpc_id(1, "list_rooms")
+
 @rpc("any_peer", "reliable")
 func despawn_player(pid: String) -> void:
 	_despawn_player(pid)
@@ -1072,12 +1382,69 @@ func sync_score(player_id: String, kills: int, deaths: int) -> void:
 			if gui_node.has_method("set_score"):
 				gui_node.set_score(kills, deaths)
 
+@rpc("any_peer", "reliable")
+func sync_stats(health: int, max_health: int, shield: int, max_shield: int) -> void:
+	if level_instance and level_instance.has_node("GUI"):
+		var gui_node = level_instance.get_node("GUI")
+		if gui_node.has_method("set_health_shield"):
+			gui_node.set_health_shield(health, max_health, shield, max_shield)
+
 func _send_scores_to(peer_id: int) -> void:
 	if not multiplayer.is_server():
 		return
 	for player_id in game_state.players.keys():
 		var score = game_state.get_score(player_id)
 		rpc_id(peer_id, "sync_score", player_id, score["kills"], score["deaths"])
+
+func _send_stats_to(player_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var st = game_state.get_player(player_id)
+	if typeof(st) != TYPE_DICTIONARY:
+		return
+	var health = int(st.get("health", MAX_HEALTH))
+	var shield = int(st.get("shield", 0))
+	rpc_id(int(player_id), "sync_stats", health, MAX_HEALTH, shield, MAX_SHIELD)
+
+func _get_player_scene_path(pid: String) -> String:
+	var st = game_state.get_player(pid)
+	if typeof(st) == TYPE_DICTIONARY and st.has("scene"):
+		return st["scene"]
+	return car.resource_path
+
+func _is_out_of_bounds(pos: Vector3) -> bool:
+	return pos.y < OOB_Y_THRESHOLD or Vector2(pos.x, pos.z).length() > OOB_DIST_THRESHOLD
+
+func _request_soft_respawn() -> void:
+	if not multiplayer.multiplayer_peer:
+		return
+	if vehicle_rigid_body and vehicle_rigid_body.has_meta("_oob_respawn_until"):
+		var until = int(vehicle_rigid_body.get_meta("_oob_respawn_until"))
+		if Time.get_ticks_msec() < until:
+			return
+	if vehicle_rigid_body:
+		vehicle_rigid_body.set_meta("_oob_respawn_until", Time.get_ticks_msec() + OOB_RESPAWN_COOLDOWN_MS)
+		vehicle_rigid_body.set_meta("_oob_guard_until", Time.get_ticks_msec() + OOB_GUARD_MS)
+	rpc_id(1, "request_soft_respawn")
+
+@rpc("any_peer", "reliable")
+func request_soft_respawn() -> void:
+	if not multiplayer.is_server():
+		return
+	var pid = str(multiplayer.get_remote_sender_id())
+	var room_id = _get_room_id_for_player(pid)
+	var room = _get_room(room_id)
+	if room_id == "" or room.get("status", "lobby") != "in_game":
+		return
+	if not room.has("players") or not room["players"].has(pid):
+		return
+	var spawn := _choose_spawn_position(pid)
+	var scene_path = _get_player_scene_path(pid)
+	# Respawn on server
+	_do_respawn(pid, scene_path, spawn, false)
+	# Respawn on clients in the room
+	for member_id in room["players"]:
+		rpc_id(int(member_id), "soft_respawn_player", pid, scene_path, spawn)
 
 func _restore_collisions(car_node: Node) -> void:
 	if car_node.has_meta("_orig_layer"):
@@ -1093,11 +1460,63 @@ func _defer_respawn_enable(car_node: Node) -> void:
 	await get_tree().create_timer(RESPAWN_FREEZE_TIME).timeout
 	if is_instance_valid(car_node):
 		_restore_collisions(car_node)
-		await get_tree().create_timer(RESPAWN_UNFREEZE_DELAY).timeout
+		await get_tree().create_timer(GUARD_SETTLE_TIME).timeout
 		if is_instance_valid(car_node):
 			car_node.freeze = false
 			car_node.linear_velocity = Vector3.ZERO
 			car_node.angular_velocity = Vector3.ZERO
+			if car_node.has_meta("_orig_gravity_scale"):
+				car_node.gravity_scale = float(car_node.get_meta("_orig_gravity_scale"))
+				car_node.set_meta("_orig_gravity_scale", null)
+			if car_node.has_meta("_orig_linear_damp"):
+				car_node.linear_damp = float(car_node.get_meta("_orig_linear_damp"))
+				car_node.set_meta("_orig_linear_damp", null)
+			if car_node.has_meta("_orig_angular_damp"):
+				car_node.angular_damp = float(car_node.get_meta("_orig_angular_damp"))
+				car_node.set_meta("_orig_angular_damp", null)
+			if car_node.has_meta("_orig_custom_integrator"):
+				# restore after rays are re-enabled
+				car_node.set_meta("_restore_custom_integrator", bool(car_node.get_meta("_orig_custom_integrator")))
+				car_node.set_meta("_orig_custom_integrator", null)
+			car_node.set_meta("_respawn_guard_until", null)
+			car_node.set_meta("_guard_transform", null)
+			car_node.set_meta("_guard_lock_until", null)
+			_reset_vehicle_inputs(car_node)
+			_set_vehicle_processing(car_node, true)
+			_set_wheel_rays(car_node, false)
+			_defer_enable_rays(car_node)
+			if car_node.has_method("set_sleeping"):
+				car_node.set_sleeping(false)
+
+func _defer_spawn_enable(car_node: Node) -> void:
+	await get_tree().create_timer(SPAWN_FREEZE_TIME).timeout
+	if is_instance_valid(car_node):
+		_restore_collisions(car_node)
+		await get_tree().create_timer(GUARD_SETTLE_TIME).timeout
+		if is_instance_valid(car_node):
+			car_node.freeze = false
+			car_node.linear_velocity = Vector3.ZERO
+			car_node.angular_velocity = Vector3.ZERO
+			if car_node.has_meta("_orig_gravity_scale"):
+				car_node.gravity_scale = float(car_node.get_meta("_orig_gravity_scale"))
+				car_node.set_meta("_orig_gravity_scale", null)
+			if car_node.has_meta("_orig_linear_damp"):
+				car_node.linear_damp = float(car_node.get_meta("_orig_linear_damp"))
+				car_node.set_meta("_orig_linear_damp", null)
+			if car_node.has_meta("_orig_angular_damp"):
+				car_node.angular_damp = float(car_node.get_meta("_orig_angular_damp"))
+				car_node.set_meta("_orig_angular_damp", null)
+			if car_node.has_meta("_orig_custom_integrator"):
+				# restore after rays are re-enabled
+				car_node.set_meta("_restore_custom_integrator", bool(car_node.get_meta("_orig_custom_integrator")))
+				car_node.set_meta("_orig_custom_integrator", null)
+			car_node.set_meta("_respawn_guard_until", null)
+			car_node.set_meta("_guard_transform", null)
+			car_node.set_meta("_guard_lock_until", null)
+			_reset_vehicle_inputs(car_node)
+			_set_vehicle_processing(car_node, true)
+			_set_wheel_rays(car_node, false)
+			_defer_enable_rays(car_node)
 			if car_node.has_method("set_sleeping"):
 				car_node.set_sleeping(false)
 
@@ -1105,7 +1524,52 @@ func _apply_respawn_guard(car_node: Node) -> void:
 	if car_node and car_node.has_method("get"):
 		car_node.set_meta("_orig_gravity_scale", car_node.gravity_scale)
 		car_node.gravity_scale = 0.0
+		car_node.set_meta("_orig_linear_damp", car_node.linear_damp)
+		car_node.set_meta("_orig_angular_damp", car_node.angular_damp)
+		car_node.linear_damp = 6.0
+		car_node.angular_damp = 6.0
+		car_node.set_meta("_orig_custom_integrator", car_node.custom_integrator)
+		car_node.custom_integrator = true
+		_reset_vehicle_inputs(car_node)
+		_set_vehicle_processing(car_node, false)
+		car_node.set_meta("_guard_transform", car_node.global_transform)
 		car_node.set_meta("_respawn_guard_until", Time.get_ticks_msec() + RESPAWN_GUARD_MS)
+		car_node.set_meta("_guard_lock_until", Time.get_ticks_msec() + GUARD_LOCK_TIME_MS)
+
+func _reset_vehicle_inputs(car_node: Node) -> void:
+	if car_node and car_node.has_method("set"):
+		car_node.set("brake_input", 0.0)
+		car_node.set("steering_input", 0.0)
+		car_node.set("throttle_input", 0.0)
+		car_node.set("handbrake_input", 0.0)
+		car_node.set("clutch_input", 0.0)
+		car_node.set("current_gear", 0)
+		car_node.set("requested_gear", 0)
+		if car_node.has_method("reset_state"):
+			car_node.reset_state()
+
+func _set_vehicle_processing(car_node: Node, enabled: bool) -> void:
+	if not car_node:
+		return
+	car_node.set_physics_process(enabled)
+	var nodes = car_node.find_children("", "Node", true, false)
+	for n in nodes:
+		n.set_physics_process(enabled)
+	_set_wheel_rays(car_node, enabled)
+
+func _set_wheel_rays(car_node: Node, enabled: bool) -> void:
+	var rays = car_node.find_children("", "RayCast3D", true, false)
+	for r in rays:
+		if r is RayCast3D:
+			r.enabled = enabled
+
+func _defer_enable_rays(car_node: Node) -> void:
+	await get_tree().create_timer(RAY_ENABLE_DELAY).timeout
+	if is_instance_valid(car_node):
+		_set_wheel_rays(car_node, true)
+		if car_node.has_meta("_restore_custom_integrator"):
+			car_node.custom_integrator = bool(car_node.get_meta("_restore_custom_integrator"))
+			car_node.set_meta("_restore_custom_integrator", null)
 
 func _start_server(server_port: int, max_players: int) -> bool:
 	var error = peer.create_server(server_port, max_players)
