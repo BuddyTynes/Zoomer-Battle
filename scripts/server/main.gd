@@ -53,6 +53,7 @@ const OOB_GUARD_MS := 2000
 const SPAWN_MIN_SEPARATION := 16.0
 const SPAWN_RETRY_COUNT := 5
 const RAY_ENABLE_DELAY := 2.0
+const SPAWN_SYNC_LOCK_MS := 2000
 const RESPAWN_CLEARANCE := 3.0
 const RESPAWN_RAY_HEIGHT := 10.0
 const RESPAWN_RAY_DEPTH := 50.0
@@ -71,6 +72,7 @@ var _next_room_id := 1
 var current_room_id: String = ""
 var current_room: Dictionary = {}
 var in_match := false
+var sync_enabled := true
 
 var _cmd_dedicated := false
 var _cmd_port := DEFAULT_PORT
@@ -181,6 +183,8 @@ func _cache_spawn_points() -> void:
 	_spawn_points.clear()
 	if level_instance:
 		var spawn_parents = level_instance.find_children("SpawnPoints", "Node3D", true, false)
+		var spawn_parents_spaced = level_instance.find_children("Spawn points", "Node3D", true, false)
+		spawn_parents.append_array(spawn_parents_spaced)
 		for sp in spawn_parents:
 			for c in sp.get_children():
 				if c is Node3D:
@@ -189,8 +193,21 @@ func _cache_spawn_points() -> void:
 		for node in grouped:
 			if node is Node3D and not _spawn_points.has(node):
 				_spawn_points.append(node)
+		if _spawn_points.is_empty():
+			var all_nodes = level_instance.find_children("", "Node3D", true, false)
+			for node in all_nodes:
+				var name_lower = str(node.name).to_lower()
+				if name_lower.begins_with("spawn") and not _spawn_points.has(node):
+					_spawn_points.append(node)
 	if _spawn_points.size() > 1:
 		_spawn_points.shuffle()
+
+func _get_ordered_spawn_points() -> Array:
+	var points = _spawn_points.duplicate()
+	points.sort_custom(func(a, b):
+		return str(a.name) < str(b.name)
+	)
+	return points
 
 func _get_next_spawn_position() -> Vector3:
 	if _spawn_points.size() == 0:
@@ -396,16 +413,16 @@ func add_player(pid: int, car_scene_path, mods, spawn_pos: Vector3 = Vector3(INF
 				cam.follow_this = car_instance
 		car_instance.set_meta("_input_lock_until", Time.get_ticks_msec() + SPAWN_INPUT_LOCK_MS)
 		car_instance.set_meta("_oob_guard_until", Time.get_ticks_msec() + OOB_GUARD_MS)
-	_apply_respawn_guard(car_instance)
-			
 	var clearance = _get_car_clearance(car_instance) + SPAWN_BONUS_CLEARANCE
 	var spawn = spawn_pos
 	if not spawn.is_finite():
 		spawn = _choose_spawn_position(str(pid))
 	spawn = _adjust_spawn_position(spawn, [car_instance], clearance)
 	car_instance.global_transform = Transform3D(Basis.IDENTITY, spawn)
+	car_instance.set_meta("_sync_lock_until", Time.get_ticks_msec() + SPAWN_SYNC_LOCK_MS)
 	car_instance.linear_velocity = Vector3.ZERO
 	car_instance.angular_velocity = Vector3.ZERO
+	_apply_respawn_guard(car_instance)
 	_defer_spawn_enable(car_instance)
 	print("Player with ID " + str(pid) + " added to the game.")
 
@@ -434,6 +451,12 @@ func _ensure_player_state(pid: int, car_scene_path, mods) -> void:
 func update_player_transform(pid: int, new_transform: Transform3D) -> void:
 	var player = car_controller.get_node_or_null(str(pid))
 	if player and pid != multiplayer.get_unique_id():
+		if not sync_enabled:
+			return
+		if player.has_meta("_sync_lock_until"):
+			var lock_until = int(player.get_meta("_sync_lock_until"))
+			if Time.get_ticks_msec() < lock_until:
+				return
 		if player.has_meta("_guard_lock_until"):
 			var lock_until = int(player.get_meta("_guard_lock_until"))
 			if Time.get_ticks_msec() < lock_until:
@@ -511,6 +534,12 @@ func _physics_process(_delta: float) -> void:
 				var lv = vehicle_rigid_body.linear_velocity
 				lv.y = clampf(lv.y, -MAX_VERTICAL_SPEED, MAX_VERTICAL_SPEED)
 				vehicle_rigid_body.linear_velocity = lv
+			if vehicle_rigid_body.has_meta("_sync_lock_until"):
+				var sync_until = int(vehicle_rigid_body.get_meta("_sync_lock_until"))
+				if Time.get_ticks_msec() < sync_until:
+					return
+			if not sync_enabled:
+				return
 			# Do not send transforms while our local car is KO'd or missing
 			if vehicle_rigid_body and not (vehicle_rigid_body.has_meta("dead") and vehicle_rigid_body.get_meta("dead") == true) and _is_transform_valid(vehicle_rigid_body.global_transform):
 				rpc("update_player_transform", multiplayer.get_unique_id(), vehicle_rigid_body.global_transform.orthonormalized())
@@ -765,6 +794,7 @@ func _do_respawn(pid: String, car_scene_path: String, spawn_pos: Vector3, reset_
 		var clearance = _get_car_clearance(car_node) + RESPAWN_BONUS_CLEARANCE
 		var safe_spawn = _adjust_spawn_position(spawn_pos, [car_node], clearance)
 		car_node.global_transform = Transform3D(Basis.IDENTITY, safe_spawn)
+		car_node.set_meta("_sync_lock_until", Time.get_ticks_msec() + SPAWN_SYNC_LOCK_MS)
 		# Clear KO state and motion
 		car_node.set_meta("dead", false)
 		car_node.linear_velocity = Vector3.ZERO
@@ -1106,13 +1136,20 @@ func _start_match(room_id: String) -> void:
 	if room.get("status", "lobby") != "lobby":
 		return
 	_ensure_level_loaded()
+	_cache_spawn_points()
 	room["status"] = "in_game"
 	rooms[room_id] = room
-	var reserved_spawns: Array = []
 	var spawn_map := {}
+	var ordered_spawns = _get_ordered_spawn_points()
+	if ordered_spawns.is_empty():
+		ordered_spawns = _spawn_points
+	var index := 0
 	for pid in room["players"]:
-		var spawn = _choose_unique_spawn(reserved_spawns)
-		reserved_spawns.append(spawn)
+		var spawn = Vector3(0, 2, 0)
+		if ordered_spawns.size() > 0:
+			var sp_node: Node3D = ordered_spawns[index % ordered_spawns.size()]
+			spawn = sp_node.global_transform.origin
+			index += 1
 		spawn_map[pid] = spawn
 	room["spawn_map"] = spawn_map
 	rooms[room_id] = room
@@ -1142,6 +1179,12 @@ func _start_match(room_id: String) -> void:
 	for member_id in room["players"]:
 		rpc_id(int(member_id), "room_updated", room)
 	_broadcast_rooms_list()
+	_schedule_sync_ready(room_id, room["players"])
+
+func _schedule_sync_ready(room_id: String, players: Array) -> void:
+	await get_tree().create_timer(2.5).timeout
+	for pid in players:
+		rpc_id(int(pid), "sync_ready", room_id)
 
 func _end_match(room_id: String, winner_id: String) -> void:
 	_cleanup_room(room_id, winner_id, "match_ended")
@@ -1327,6 +1370,7 @@ func room_left() -> void:
 	if room_info_label:
 		room_info_label.text = "Waiting..."
 	_set_lobby_status("Left room")
+	sync_enabled = true
 
 @rpc("any_peer", "reliable")
 func room_updated(room_data: Dictionary) -> void:
@@ -1344,6 +1388,7 @@ func match_started(room_id: String, _kill_limit: int) -> void:
 	if current_room_id != room_id:
 		return
 	in_match = true
+	sync_enabled = false
 	_show_lobby(false)
 	_ensure_level_loaded()
 
@@ -1352,6 +1397,7 @@ func match_ended(room_id: String, winner_id: String, scores: Array) -> void:
 	if current_room_id != room_id:
 		return
 	in_match = false
+	sync_enabled = true
 	_show_end_game(true)
 	if end_game_winner:
 		end_game_winner.text = "Winner: %s" % winner_id
@@ -1365,6 +1411,12 @@ func match_ended(room_id: String, winner_id: String, scores: Array) -> void:
 			var line = "%s  K:%s  D:%s" % [str(s.get("id", "")), str(s.get("kills", 0)), str(s.get("deaths", 0))]
 			end_game_scores.add_item(line)
 	_set_lobby_status("Match ended. Winner: %s" % winner_id)
+
+@rpc("any_peer", "reliable")
+func sync_ready(room_id: String) -> void:
+	if current_room_id != room_id:
+		return
+	sync_enabled = true
 
 func _on_end_game_continue_pressed() -> void:
 	_show_end_game(false)
