@@ -460,6 +460,27 @@ front_wheel_mass = 363.0
 rear_tire_radius = 0.85
 rear_tire_width = 1000.0
 rear_wheel_mass = 363.0
+braking_grip_multiplier = 2.0
+tire_stiffnesses = {
+"Dirt": 2.5,
+"Grass": 2.0,
+"Road": 14.0
+}
+coefficient_of_friction = {
+"Dirt": 2.2,
+"Grass": 2.0,
+"Road": 4.0
+}
+lateral_grip_assist = {
+"Dirt": 0.05,
+"Grass": 0.05,
+"Road": 0.1
+}
+longitudinal_grip_ratio = {
+"Dirt": 0.7,
+"Grass": 0.65,
+"Road": 0.8
+}
 
 [node name="Monster Truck" type="MeshInstance3D" parent="."]
 transform = Transform3D(-100, 8.74228e-06, 3.82137e-13, 0, -4.37114e-06, 100, 8.74228e-06, 100, 4.37114e-06, 0, 1.8, -0.1)

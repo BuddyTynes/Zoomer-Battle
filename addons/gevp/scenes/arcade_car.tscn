@@ -357,6 +357,29 @@ center_of_gravity_height_offset = -0.25
 front_damping_ratio = 0.6
 rear_damping_ratio = 0.6
 braking_grip_multiplier = 2.0
+max_torque = 900.0
+max_rpm = 7500.0
+final_drive = 4.2
+tire_stiffnesses = {
+"Dirt": 3.0,
+"Grass": 2.0,
+"Road": 18.0
+}
+coefficient_of_friction = {
+"Dirt": 2.5,
+"Grass": 2.0,
+"Road": 4.5
+}
+lateral_grip_assist = {
+"Dirt": 0.05,
+"Grass": 0.05,
+"Road": 0.12
+}
+longitudinal_grip_ratio = {
+"Dirt": 0.7,
+"Grass": 0.65,
+"Road": 0.85
+}
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4545e-14, 0.2, 0)

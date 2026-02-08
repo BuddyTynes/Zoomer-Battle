@@ -50,6 +50,8 @@ class_name VehicleController
 func _physics_process(_delta):
     if vehicle_node == null:
         return
+    if _guard_break_requested():
+        return
     if vehicle_node.has_meta("_respawn_guard_until"):
         var until = int(vehicle_node.get_meta("_respawn_guard_until"))
         if Time.get_ticks_msec() < until:
@@ -104,3 +106,20 @@ func _physics_process(_delta):
     if vehicle_node.current_gear == -1:
         vehicle_node.brake_input = Input.get_action_strength(string_throttle_input)
         vehicle_node.throttle_input = Input.get_action_strength(string_brake_input)
+
+func _guard_break_requested() -> bool:
+    if not (vehicle_node.has_meta("_guard_lock_until") or vehicle_node.has_meta("_respawn_guard_until")):
+        return false
+    var steer = 0.0
+    if string_steer_left != "" and string_steer_right != "":
+        steer = Input.get_action_strength(string_steer_left) - Input.get_action_strength(string_steer_right)
+    var throttle = Input.get_action_strength(string_throttle_input) if string_throttle_input != "" else 0.0
+    var brake = Input.get_action_strength(string_brake_input) if string_brake_input != "" else 0.0
+    var handbrake = Input.get_action_strength(string_handbrake_input) if string_handbrake_input != "" else 0.0
+    if absf(steer) < 0.1 and throttle < 0.1 and brake < 0.1 and handbrake < 0.1:
+        return false
+    var main = get_tree().current_scene
+    if main and main.has_method("break_guard_for_vehicle"):
+        main.break_guard_for_vehicle(vehicle_node)
+        return true
+    return false

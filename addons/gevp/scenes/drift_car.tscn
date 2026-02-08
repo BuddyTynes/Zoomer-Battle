@@ -422,15 +422,16 @@ max_steering_angle = 1.2
 stability_yaw_engage_angle = 0.1
 stability_yaw_strength = 2.0
 stability_yaw_ground_multiplier = 4.0
-max_torque = 800.0
+max_torque = 1000.0
 max_rpm = 8000.0
 idle_rpm = 700.0
 torque_curve = SubResource("Curve_bt7kc")
 motor_moment = 0.3
 gear_ratios = Array[float]([3.01, 2.07, 1.43, 1.0, 0.84, 0.5])
-final_drive = 4.1
+final_drive = 4.6
 reverse_ratio = 3.28
 shift_time = 0.25
+braking_grip_multiplier = 2.0
 front_variable_split = 0.5
 vehicle_mass = 1400.0
 front_weight_distribution = 0.526
@@ -446,19 +447,24 @@ rear_arb_ratio = 0.5
 rear_camber = 0.034
 rear_toe = 0.005
 tire_stiffnesses = {
-"Dirt": 0.5,
-"Grass": 0.5,
-"Road": 20.0
+"Dirt": 3.0,
+"Grass": 2.0,
+"Road": 18.0
 }
 coefficient_of_friction = {
-"Dirt": 1.4,
-"Grass": 1.0,
-"Road": 2.0
+"Dirt": 2.5,
+"Grass": 2.0,
+"Road": 4.5
+}
+lateral_grip_assist = {
+"Dirt": 0.05,
+"Grass": 0.05,
+"Road": 0.12
 }
 longitudinal_grip_ratio = {
-"Dirt": 0.56,
-"Grass": 0.8,
-"Road": 0.6
+"Dirt": 0.7,
+"Grass": 0.65,
+"Road": 0.85
 }
 front_tire_radius = 0.38
 rear_tire_radius = 0.38

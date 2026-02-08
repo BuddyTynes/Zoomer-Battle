@@ -44,6 +44,7 @@ const SPAWN_FREEZE_TIME := 1.2
 const SPAWN_BONUS_CLEARANCE := 2.0
 const GUARD_LOCK_TIME_MS := 2200
 const GUARD_SETTLE_TIME := 1.2
+const FORCE_DROP_TIME := 0.6
 const GUARD_POSITION_LOCK := true
 const OOB_Y_THRESHOLD := -50.0
 const OOB_DIST_THRESHOLD := 600.0
@@ -459,6 +460,18 @@ func _physics_process(_delta: float) -> void:
 						if lock_xform is Transform3D:
 							vehicle_rigid_body.global_transform = lock_xform
 					return
+				else:
+					break_guard_for_vehicle(vehicle_rigid_body)
+					return
+			if vehicle_rigid_body.has_meta("_force_drop_until"):
+				var drop_until = int(vehicle_rigid_body.get_meta("_force_drop_until"))
+				if Time.get_ticks_msec() < drop_until:
+					vehicle_rigid_body.linear_velocity = Vector3(0, -2.0, 0)
+					vehicle_rigid_body.angular_velocity = Vector3.ZERO
+					return
+				else:
+					vehicle_rigid_body.set_meta("_force_drop_until", null)
+					vehicle_rigid_body.can_sleep = true
 			# Apply respawn guard to prevent launch/NaNs
 			if vehicle_rigid_body.has_meta("_respawn_guard_until"):
 				var until = int(vehicle_rigid_body.get_meta("_respawn_guard_until"))
@@ -1485,6 +1498,7 @@ func _defer_respawn_enable(car_node: Node) -> void:
 			_set_vehicle_processing(car_node, true)
 			_set_wheel_rays(car_node, false)
 			_defer_enable_rays(car_node)
+			_force_drop(car_node)
 			if car_node.has_method("set_sleeping"):
 				car_node.set_sleeping(false)
 
@@ -1517,6 +1531,7 @@ func _defer_spawn_enable(car_node: Node) -> void:
 			_set_vehicle_processing(car_node, true)
 			_set_wheel_rays(car_node, false)
 			_defer_enable_rays(car_node)
+			_force_drop(car_node)
 			if car_node.has_method("set_sleeping"):
 				car_node.set_sleeping(false)
 
@@ -1570,6 +1585,56 @@ func _defer_enable_rays(car_node: Node) -> void:
 		if car_node.has_meta("_restore_custom_integrator"):
 			car_node.custom_integrator = bool(car_node.get_meta("_restore_custom_integrator"))
 			car_node.set_meta("_restore_custom_integrator", null)
+
+func break_guard_for_vehicle(car_node: Node) -> void:
+	if car_node == null:
+		return
+	if car_node.has_meta("_guard_lock_until") or car_node.has_meta("_respawn_guard_until"):
+		_restore_collisions(car_node)
+		_reset_vehicle_inputs(car_node)
+		car_node.linear_velocity = Vector3.ZERO
+		car_node.angular_velocity = Vector3.ZERO
+		if car_node.has_meta("_orig_gravity_scale"):
+			car_node.gravity_scale = float(car_node.get_meta("_orig_gravity_scale"))
+			car_node.set_meta("_orig_gravity_scale", null)
+		if car_node.has_meta("_orig_linear_damp"):
+			car_node.linear_damp = float(car_node.get_meta("_orig_linear_damp"))
+			car_node.set_meta("_orig_linear_damp", null)
+		if car_node.has_meta("_orig_angular_damp"):
+			car_node.angular_damp = float(car_node.get_meta("_orig_angular_damp"))
+			car_node.set_meta("_orig_angular_damp", null)
+		if car_node.has_meta("_orig_custom_integrator"):
+			car_node.custom_integrator = bool(car_node.get_meta("_orig_custom_integrator"))
+			car_node.set_meta("_orig_custom_integrator", null)
+		else:
+			car_node.custom_integrator = false
+		car_node.set_meta("_guard_lock_until", null)
+		car_node.set_meta("_respawn_guard_until", null)
+		car_node.set_meta("_guard_transform", null)
+		_set_vehicle_processing(car_node, true)
+		_set_wheel_rays(car_node, true)
+		if car_node.has_method("set_sleeping"):
+			car_node.set_sleeping(false)
+		car_node.freeze = false
+		_force_drop(car_node)
+
+func _force_drop(car_node: Node) -> void:
+	if car_node == null:
+		return
+	# Ensure gravity is active
+	if car_node.has_meta("_orig_gravity_scale"):
+		car_node.gravity_scale = float(car_node.get_meta("_orig_gravity_scale"))
+		car_node.set_meta("_orig_gravity_scale", null)
+	elif car_node.has_method("set"):
+		car_node.gravity_scale = 1.0
+	car_node.freeze = false
+	car_node.set_meta("_guard_transform", null)
+	# Nudge downward so it settles to ground
+	if car_node is RigidBody3D:
+		car_node.linear_velocity = Vector3(0, minf(car_node.linear_velocity.y, -2.0), 0)
+		car_node.angular_velocity = Vector3.ZERO
+		car_node.can_sleep = false
+		car_node.set_meta("_force_drop_until", Time.get_ticks_msec() + int(FORCE_DROP_TIME * 1000.0))
 
 func _start_server(server_port: int, max_players: int) -> bool:
 	var error = peer.create_server(server_port, max_players)
